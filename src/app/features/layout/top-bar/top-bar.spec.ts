@@ -55,9 +55,20 @@ describe('TopBarComponent', () => {
     expect(component).toBeTruthy();
     const compiled = TestBed.createComponent(TopBarComponent);
     compiled.detectChanges();
+
+    // Check picture element sources
+    const pictureEl = compiled.nativeElement.querySelector('picture');
+    expect(pictureEl).toBeTruthy();
+    const sources = pictureEl.querySelectorAll('source');
+    expect(sources.length).toBe(2);
+    expect(sources[0].getAttribute('srcset')).toBe('logo_full_white_1x.avif 1x, logo_full_white_2x.avif 2x');
+    expect(sources[1].getAttribute('srcset')).toBe('logo_full_white_1x.webp 1x, logo_full_white_2x.webp 2x');
+
     const imgEl = compiled.nativeElement.querySelector('.logo-image');
     expect(imgEl).toBeTruthy();
-    expect(imgEl.getAttribute('src')).toBe('logo_site.png');
+    expect(imgEl.getAttribute('src')).toBe('logo_full_white_2x.png');
+    expect(imgEl.getAttribute('srcset')).toBe('logo_full_white_1x.png 1x, logo_full_white_2x.png 2x');
+    expect(imgEl.getAttribute('fetchpriority')).toBe('high');
   });
 
   it('should toggle and close drawer', () => {

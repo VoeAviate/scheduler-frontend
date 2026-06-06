@@ -1,6 +1,10 @@
 <nav class="top-bar">
   <div class="logo-group" [routerLink]="auth.userRole() === 'ADMINISTRATOR' ? '/admin' : '/student'">
-    <img src="logo_site.png" alt="Aviate Logo" class="logo-image" />
+    <picture>
+      <source srcset="logo_full_white_1x.avif 1x, logo_full_white_2x.avif 2x" type="image/avif">
+      <source srcset="logo_full_white_1x.webp 1x, logo_full_white_2x.webp 2x" type="image/webp">
+      <img src="logo_full_white_2x.png" srcset="logo_full_white_1x.png 1x, logo_full_white_2x.png 2x" alt="Aviate Logo" class="logo-image" fetchpriority="high" />
+    </picture>
   </div>
 
   <div class="nav-controls">
