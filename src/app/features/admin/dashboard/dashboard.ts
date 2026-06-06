@@ -5,7 +5,6 @@ import { DateTimeService } from '../../../core/date-time/date-time.service';
 import { ReleaseManagerComponent } from '../release-manager/release-manager';
 import { ConfigPanelComponent } from '../config-panel/config-panel';
 import { StatusTrackerComponent } from '../status-tracker/status-tracker';
-import { InstructorPoliciesComponent } from '../instructor-policies/instructor-policies';
 
 @Component({
   selector: 'aviate-admin-dashboard',
@@ -14,8 +13,7 @@ import { InstructorPoliciesComponent } from '../instructor-policies/instructor-p
     CommonModule,
     ReleaseManagerComponent,
     ConfigPanelComponent,
-    StatusTrackerComponent,
-    InstructorPoliciesComponent
+    StatusTrackerComponent
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',

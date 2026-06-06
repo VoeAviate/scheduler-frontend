@@ -88,7 +88,6 @@ src/app/
 │   ├── models/                # Strictly typed domain interfaces (no 'any')
 │   │   ├── user.model.ts      # Profile, role, and custom FlightCircle fields
 │   │   ├── availability.model.ts # AvailabilitySlot and DefaultAvailability contracts
-│   │   ├── instructor.model.ts # Regulatory policies and day-off contracts
 │   │   └── aircraft.model.ts  # Aircraft details and usage intervals
 │   └── services/              # State-bearing services (using Signals)
 │       ├── student-availability.service.ts # Manages student availability state & cache
@@ -107,8 +106,7 @@ src/app/
 │   │   ├── dashboard/         # Shell admin view
 │   │   ├── release-manager/   # Month release & notifications configuration
 │   │   ├── config-panel/      # Standard briefing/debriefing & flight duration settings
-│   │   ├── status-tracker/    # Track students pending completion
-│   │   └── instructor-policies/# Set instructor rules and restrictions
+│   │   └── status-tracker/    # Track students pending completion
 │   └── layout/                # Main shell frames
 │       └── top-bar/           # Navigation, logo, lang switcher, hamburger menu
 └── shared/                    # Reusable components, directives, and pipes

@@ -65,6 +65,13 @@ describe('CalendarComponent', () => {
     expect(header).toContain('2026');
   });
 
+  it('should capitalize only the first character of the display header', () => {
+    vi.spyOn(dateTimeService, 'formatToLocale').mockReturnValue('julho de 2026');
+    adminConfigSpy.releasedMonth.set({ year: 2026, month: 8 });
+    const header = component.displayHeader();
+    expect(header).toBe('Julho de 2026');
+  });
+
   it('should identify disabled days outside the released month', () => {
     const juneDay = new Date(2026, 5, 30); // June 30
     const julyDay = new Date(2026, 6, 15); // July 15

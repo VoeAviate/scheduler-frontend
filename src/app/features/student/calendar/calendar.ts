@@ -70,10 +70,12 @@ export class CalendarComponent {
     const released = this.adminConfig.releasedMonth();
     if (!released) return '';
     // Custom formatted localized header e.g. "July 2026"
-    return this.dateTime.formatToLocale(
+    const formatted = this.dateTime.formatToLocale(
       this.releasedMonthDate().toISOString(),
       { month: 'long', year: 'numeric' }
     );
+    if (!formatted) return '';
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   });
 
   public readonly canNavigatePrev = computed(() => {

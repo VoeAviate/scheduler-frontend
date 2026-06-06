@@ -1,10 +1,6 @@
 <nav class="top-bar">
   <div class="logo-group" [routerLink]="auth.userRole() === 'ADMINISTRATOR' ? '/admin' : '/student'">
-    <svg class="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <path d="M10,50 L40,30 L90,30 L50,50 L90,70 L40,70 Z" fill="#ffffff" />
-      <circle cx="45" cy="50" r="10" fill="#000080" stroke="#ffffff" stroke-width="4" />
-    </svg>
-    <span class="logo-title">Aviate</span>
+    <img src="logo_site.png" alt="Aviate Logo" class="logo-image" />
   </div>
 
   <div class="nav-controls">

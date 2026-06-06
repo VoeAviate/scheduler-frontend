@@ -85,21 +85,7 @@ export const EN_STRINGS = {
   cpl: 'Commercial Pilot License (CPL)',
   ppl: 'Private Pilot License (PPL)',
   ir: 'Instrument Rating (IR)',
-  me: 'Multi-Engine Rating (ME)',
-
-  // Instructor Compliance
-  instructorCompliance: 'Instructor Compliance Review',
-  regulatoryHelp: 'Verification of regulatory policies (minimum rest periods, flight duty time limits) for scheduled instructors:',
-  compliant: 'COMPLIANT',
-  violation: 'VIOLATION',
-  assignDayOff: 'Assign Day Off',
-  weeklyRest: 'Weekly Regulatory Rest',
-  maxDaily: 'Max Daily Instruction',
-  vanceDetails: 'Has 36 consecutive hours off scheduled (Sunday 18:00 - Tuesday 06:00).',
-  silvaDetails: 'Scheduled flights on all 7 days of the active week. Missing 24h rest.',
-  mercerDetails: 'Under max 8 hours daily flight time instruction limit (current max: 6.5h).',
-  millerDetails: 'Has 48 consecutive hours off scheduled (Thursday 08:00 - Saturday 08:00).',
-  violationOverridden: 'Violation overridden/scheduled rest assigned.'
+  me: 'Multi-Engine Rating (ME)'
 };
 
 export const PT_STRINGS = {
@@ -189,19 +175,5 @@ export const PT_STRINGS = {
   cpl: 'Licença de Piloto Comercial (PC)',
   ppl: 'Licença de Piloto Privado (PP)',
   ir: 'Habilitação de Voo por Instrumentos (IFR)',
-  me: 'Habilitação de Multimotores (MLTE)',
-
-  // Instructor Compliance
-  instructorCompliance: 'Revisão de Conformidade do Instrutor',
-  regulatoryHelp: 'Verificação das políticas regulatórias (períodos mínimos de descanso, limites de tempo de serviço de voo) para instrutores agendados:',
-  compliant: 'CONFORME',
-  violation: 'VIOLAÇÃO',
-  assignDayOff: 'Atribuir Folga',
-  weeklyRest: 'Descanso Regulatório Semanal',
-  maxDaily: 'Instrução Diária Máxima',
-  vanceDetails: 'Possui 36 horas consecutivas de folga agendadas (Domingo 18:00 - Terça 06:00).',
-  silvaDetails: 'Voos agendados em todos os 7 dias da semana ativa. Faltam 24h de descanso.',
-  mercerDetails: 'Abaixo do limite máximo diário de 8 horas de instrução de voo (máximo atual: 6.5h).',
-  millerDetails: 'Possui 48 horas consecutivas de folga agendadas (Quinta 08:00 - Sábado 08:00).',
-  violationOverridden: 'Violação desconsiderada/folga agendada atribuída.'
+  me: 'Habilitação de Multimotores (MLTE)'
 };

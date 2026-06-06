@@ -18,26 +18,19 @@
 .logo-group {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
   cursor: pointer;
   
-  &:hover .logo-icon {
-    transform: rotate(-10deg) scale(1.05);
+  &:hover .logo-image {
+    transform: scale(1.02);
   }
 }
 
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  transition: transform 0.3s ease;
-}
-
-.logo-title {
-  color: #ffffff;
-  font-family: var(--font-serif);
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.logo-image {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.2s ease;
 }
 
 .nav-controls {

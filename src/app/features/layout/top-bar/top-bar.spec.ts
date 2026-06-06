@@ -51,8 +51,13 @@ describe('TopBarComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create the component', () => {
+  it('should create the component and render the logo image', () => {
     expect(component).toBeTruthy();
+    const compiled = TestBed.createComponent(TopBarComponent);
+    compiled.detectChanges();
+    const imgEl = compiled.nativeElement.querySelector('.logo-image');
+    expect(imgEl).toBeTruthy();
+    expect(imgEl.getAttribute('src')).toBe('logo_site.png');
   });
 
   it('should toggle and close drawer', () => {
