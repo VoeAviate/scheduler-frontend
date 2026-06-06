@@ -1,0 +1,3878 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FlightCircle API",
+    "version": "1.0.0",
+    "description": "## What is the Flight Circle API?\n\nThe Flight Circle API lets your application read and manage aviation data on behalf of\nFlight Circle users — things like pilot profiles, aircraft, schedules, and flight records.\nIf you're building a third-party integration or an internal tool that connects to Flight\nCircle, this is the right place to start.\n\n## Getting Started\n\nTo use the API, you first need a `client_id` and a `client_secret`. Contact the Flight\nCircle support team to register your app and receive these credentials. The\n`client_secret` must be kept private — never include it in client-side code or share it\npublicly.\n\n## Basics\n\nAll API endpoints follow the form:\n\n```\nhttps://www.flightcircle.com/v1/api/pub/METHOD_NAME\n```\n\n- All requests must use **HTTPS (TLS 1.2 or above)**.\n- Do not add a trailing slash to any URL — the server will return a `404` if you do.\n- Parameters shown in curly brackets in the endpoint docs are path variables. Replace\n  them with actual values: `/aircraft/{FboID}/{AircraftID}` → `/aircraft/100/200`.\n\n## The OAuth Flow\n\nAccess to user data is controlled through OAuth 2.0 — the same \"sign in with Google\"\npattern you've probably seen before. The idea is simple: the user clicks a button in\nyour app, logs in on the Flight Circle website, and decides what your app is allowed to\nsee. Your app never handles their password.\n\nThe result is two tokens:\n\n- **Access token** — a short-lived credential (expires after **1 hour**) that your app\n  presents with every API request to prove it has permission. Think of it like a\n  temporary pass.\n\n- **Refresh token** — a longer-lived credential (expires after **180 days**, but the\n  clock resets every time you use it) that lets your app silently obtain a new access\n  token when the old one expires, without asking the user to log in again. Keep refresh\n  tokens secure — treat them like passwords and never expose them to the browser or\n  include them in logs.\n\n![OAuth Flow Chart](assets/oauth-flowchart.png)\n\n### Step 1 — Send the user to authorize\n\nYour web or mobile app should send a GET request to:\n\n```\nGET https://www.flightcircle.com/v1/api/pub/authorize\n```\n\nPass these query parameters:\n\n- `client_id` — issued when you registered your app **(required)**\n- `state` — a unique string you generate for this user **(optional, but strongly recommended — see below)**\n\nNever send `client_secret` on this request.\n\n#### Redirect URIs\n\nFor security, the URL that Flight Circle redirects the user back to after authorization\nmust be registered with us in advance — you cannot pass it freely in the request. Until\nyou register your own, the default is `http://localhost/example/server.php`, which is\nuseful for running the example code locally. You must register a production URI before\nshipping your integration. Contact our support team to register or change your\n`redirect_uri` at any time.\n\n#### State\n\nThe `state` parameter protects against request-forgery attacks. Here's how it works:\n\n1. Before redirecting the user, generate a value that's unique to this user and store it\n   (e.g. in their session).\n2. Include that value as `state` in the request to `/authorize`.\n3. When Flight Circle redirects back to your app, compare the `state` you receive with\n   the one you stored. If they don't match, reject the request — it may have been\n   initiated by a third party.\n\nThe `state` value also gives you a convenient way to identify which user is completing\nthe flow, since Flight Circle will echo it back to you unchanged.\n\n### Step 2 — Receive the temporary code\n\nIf the user approves your app, Flight Circle redirects them back to your `redirect_uri`\nwith a temporary `code` in the query string, plus the `state` you passed in Step 1.\nVerify the `state` matches before proceeding. The code can only be used once and expires\nquickly, so exchange it immediately.\n\n### Step 3 — Exchange the code for tokens\n\nSend a POST request to:\n\n```\nPOST https://www.flightcircle.com/v1/api/pub/token\n```\n\nWith these parameters:\n\n- `client_id` — issued when you registered your app **(required)**\n- `client_secret` — issued when you registered your app **(required)**\n- `code` — the temporary code from Step 2\n- `refresh_token` — a refresh token issued by this same endpoint\n\nDo not pass both `code` and `refresh_token` — one of the two is required.\n\n**Using a `code`** (first-time authorization):\n\n```json\n{\n    \"access_token\": \"0253071b6d1cce0d119cc968f6b14ceeecc3bj75\",\n    \"refresh_token\": \"126f4555b483b5e8fae721b773e02fde941a785u\"\n}\n```\n\n**Using a `refresh_token`** (renewing an expired access token):\n\n```json\n{\n    \"access_token\": \"0253071b6d1cce0d119cc968f6b14ceeecc3bj75\"\n}\n```\n\nYou can now use the `access_token` to call API methods on behalf of the user.\n\n### Storing tokens and credentials\n\n- Store `client_secret`, `access_token`, and `refresh_token` server-side only.\n- Never commit them to source control or include them in client-side code.\n- Encrypt tokens at rest if your storage supports it.\n\n## Using Access Tokens\n\nInclude the access token in the `Authorization` header of every request:\n\n```\nGET /v1/api/pub/user/describe\nAuthorization: Bearer 0253071b6d1cce0d119cc968f6b14ceeecc3bj75\n```\n\n**cURL example:**\n\n```bash\ncurl https://www.flightcircle.com/v1/api/pub/user/describe \\\n  -H \"Authorization: Bearer 0253071b6d1cce0d119cc968f6b14ceeecc3bj75\"\n```\n\nAvoid passing the token as a query string parameter — query strings appear in server\nlogs and browser history, which can expose the token unintentionally.\n\n## Scopes\n\nWhen authorizing your app, the user grants it one or more scopes that control what data\ncan be accessed:\n\n| Scope | What it allows | Who can grant it |\n|-------|----------------|-----------------|\n| `user` | Read the authenticated user's own profile and data | Any user |\n| `fbo` | Read the FBO's data (aircraft, schedules, members, etc.) | FBO admin only |\n| `write` | Create, update, and delete records | FBO admin only |\n\nRequest only the scopes your app actually needs.\n\n## Rate Limits\n\nThe API allows up to **100 requests per minute** per access token. Exceeding this limit\nreturns a `429 Too Many Requests` response. If you hit the limit, wait until the next\nminute window before retrying.\n\n## Errors\n\nErrors are returned as plain text with a semantically correct HTTP status code. For\nexample, a missing required parameter returns `400 Bad Request`, and an expired token\nreturns `401 Unauthorized`. Check the status code first, then read the response body\nfor a human-readable explanation.\n\n## Dates\n\nDates are not yet consistently formatted across all endpoints. We are working to\nstandardise them all to ISO 8601 (e.g. `2024-06-15T14:30:00Z`). Until then, treat date\nformats as endpoint-specific and check the individual endpoint documentation.\n\n## Pagination\n\nEndpoints that return lists do not currently support pagination — all results are\nreturned at once. Pagination is planned for a future release.\n\n## Status & Versioning\n\nThe Flight Circle API is currently in **beta**. Endpoints, parameters, and response\nshapes may change without prior notice while we iterate. Once the API reaches maturity\nwe will notify all registered integrations at least a couple of weeks before any\nbreaking change is introduced.\n\n## Example Code\n\nThe example below shows how to authenticate and call the `/user/describe` endpoint.\n[Download the example code](assets/example.zip) — it contains three PHP files:\n`client.php`, `server.php`, and `describe_user.php`.\n\n1. Make sure you have a local web server running (e.g. Apache or Nginx).\n2. Extract the zip into a folder named `example` at the root of your web server, so\n   that `client.php` is accessible at `http://localhost/example/client.php`.\n3. In `client.php`, set `$client_id` to your Client ID.\n4. In `server.php`, set both `$client_id` and `$client_secret` to your credentials.\n5. Open `http://localhost/example/client.php` in your browser.\n6. You will be redirected to the Flight Circle login page. Log in and authorize the app.\n7. You will be redirected back to `http://localhost/example/server.php`, which will\n   automatically exchange the code for a token and display it.\n8. Click \"Describe user to test token\" — this calls `/user/describe` using your new\n   token and displays your profile data.\n\nIf any step fails, contact our support team with the details.\n\nOnce you are ready to move beyond local testing, register your production `redirect_uri`\nwith us before going live.\n"
+  },
+  "servers": [
+    {
+      "url": "/v1/api/pub"
+    }
+  ],
+  "security": [
+    {
+      "oauth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "oauth": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "/v1/api/pub/authorize",
+            "tokenUrl": "/v1/api/pub/token",
+            "scopes": {
+              "user": "Read the authenticated user's own profile and data",
+              "fbo": "Read the FBO's data (aircraft, schedules, members, etc.)",
+              "write": "Create, update, and delete records"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "FboID": {
+        "name": "FboID",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": "FBO (organization) identifier."
+      },
+      "UserID": {
+        "name": "UserID",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": "User identifier."
+      },
+      "FileID": {
+        "name": "FileID",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "File identifier (random UUID-like string)."
+      },
+      "AircraftID": {
+        "name": "AircraftID",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": "Aircraft identifier."
+      },
+      "InstructorID": {
+        "name": "InstructorID",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Instructor identifier, or the literal string `\"all\"` to include all instructors."
+      },
+      "GenericID": {
+        "name": "ID",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Either a numeric AircraftID (returns all records for that aircraft) or a\nhash-string record ID (returns the single matching record).\n"
+      },
+      "PathYear": {
+        "name": "year",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "example": 2024
+        },
+        "description": "4-digit start year."
+      },
+      "PathMonth": {
+        "name": "month",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "example": 6
+        },
+        "description": "2-digit start month."
+      },
+      "PathDay": {
+        "name": "day",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "example": 1
+        },
+        "description": "2-digit start day."
+      },
+      "PathEYear": {
+        "name": "eyear",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "example": 2024
+        },
+        "description": "4-digit end year."
+      },
+      "PathEMonth": {
+        "name": "emonth",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "example": 6
+        },
+        "description": "2-digit end month."
+      },
+      "PathEDay": {
+        "name": "eday",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "example": 30
+        },
+        "description": "2-digit end day."
+      },
+      "AircraftList": {
+        "name": "AircraftList",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "example": "1234,5678"
+        },
+        "description": "Comma-separated list of AircraftIDs, or the literal string `\"all\"`."
+      },
+      "ServicesList": {
+        "name": "ServicesList",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "example": "all"
+        },
+        "description": "Comma-separated list of ServiceIDs, or the literal string `\"all\"`."
+      },
+      "UsersList": {
+        "name": "UsersList",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "example": "all"
+        },
+        "description": "Comma-separated list of UserIDs, or the literal string `\"all\"`."
+      },
+      "QYear": {
+        "name": "year",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "example": 2024
+        },
+        "description": "4-digit start year."
+      },
+      "QMonth": {
+        "name": "month",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "example": 1
+        },
+        "description": "2-digit start month."
+      },
+      "QDay": {
+        "name": "day",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "example": 1
+        },
+        "description": "2-digit start day."
+      },
+      "QEYear": {
+        "name": "eyear",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "example": 2024
+        },
+        "description": "4-digit end year."
+      },
+      "QEMonth": {
+        "name": "emonth",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "example": 12
+        },
+        "description": "2-digit end month."
+      },
+      "QEDay": {
+        "name": "eday",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "example": 31
+        },
+        "description": "2-digit end day."
+      }
+    },
+    "schemas": {
+      "IsoDateTime": {
+        "type": "string",
+        "format": "date-time",
+        "description": "ISO 8601 UTC date-time string, e.g. \"2025-06-01T14:30:00Z\"."
+      },
+      "IsoDate": {
+        "type": "string",
+        "format": "date",
+        "description": "Date in YYYY-MM-DD format."
+      },
+      "UnixTimestamp": {
+        "type": "integer",
+        "description": "Unix epoch timestamp (seconds)."
+      },
+      "CustomFieldValue": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "description": "Value of a custom field. Boolean fields are returned as the string \"Yes\" or \"No\".\n"
+      },
+      "UserDescribeObject": {
+        "type": "object",
+        "properties": {
+          "UserID": {
+            "type": "integer",
+            "description": "User identifier."
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "middle_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "FboID": {
+            "type": "integer"
+          },
+          "OrganizationName": {
+            "type": "string"
+          },
+          "timezone_string": {
+            "type": "string",
+            "example": "America/New_York"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "custom_fields": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CustomFieldValue"
+            },
+            "description": "Dynamic map of custom field name → value. Boolean fields are \"Yes\"/\"No\".\nOnly fields configured as visible by the FBO are included.\n"
+          }
+        }
+      },
+      "UserDescribeList": {
+        "type": "array",
+        "description": "One entry per FBO the authenticated user belongs to.\nReturned by the no-`FboID` describe variants.\n",
+        "items": {
+          "$ref": "#/components/schemas/UserDescribeObject"
+        }
+      },
+      "UserListItem": {
+        "type": "object",
+        "description": "Full customer record as returned by listAll.",
+        "properties": {
+          "ID": {
+            "type": "integer",
+            "description": "User ID."
+          },
+          "CustomerID": {
+            "type": "integer"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "Date of Birth": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "address": {
+            "type": "string"
+          },
+          "address2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "zip_code": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "emergency_contact_name": {
+            "type": "string"
+          },
+          "emergency_contact_phone": {
+            "type": "string"
+          },
+          "balance": {
+            "type": "number",
+            "format": "float",
+            "description": "Account balance rounded to 2 decimal places."
+          },
+          "created": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "Last Medical": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Medical Expiration": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Last FAA Flight Review": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Renter's Insurance Expires": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Last Local Flight Review": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "company_name": {
+            "type": "string"
+          },
+          "Certificate": {
+            "type": "string"
+          },
+          "Certificate Type": {
+            "type": "string"
+          },
+          "Issued By": {
+            "type": "string"
+          },
+          "Certificate Number": {
+            "type": "string"
+          },
+          "Date Issued": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Date Expires": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "CFI Expiration": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "Craft Categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Class Ratings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Endorsements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Other Ratings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "Status": {
+            "type": "string",
+            "enum": [
+              "Deleted",
+              "Active",
+              "Pending",
+              "ERROR"
+            ]
+          },
+          "file_categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Active file categories configured for this user."
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserFileListItem"
+            }
+          },
+          "custom_fields": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CustomFieldValue"
+            }
+          }
+        },
+        "required": [
+          "ID",
+          "CustomerID",
+          "first_name",
+          "last_name",
+          "Status"
+        ]
+      },
+      "CustomerProfileFields": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "last_name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "middle_name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255
+          },
+          "date_of_birth": {
+            "type": "string",
+            "format": "date",
+            "description": "Format YYYY-MM-DD."
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "address2": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "zip_code": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "emergency_contact_name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "emergency_contact_phone": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "company_name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255
+          },
+          "status": {
+            "type": "string",
+            "description": "Customer status. \"0\" = Inactive, \"1\" = Active, \"2\" = Pending.\n",
+            "enum": [
+              "0",
+              "1",
+              "2"
+            ]
+          },
+          "medical_class": {
+            "type": "string",
+            "description": "Allowed values depend on the FBO's aviation authority. FAA base set:\n`Class 1`, `Class 2`, `Class 3`, `BasicMed`, `Military`, `Other`,\n`Sport Pilot (Drivers License)`. CASA adds `Basic Class 2`.\n"
+          },
+          "medical_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "medical_expires": {
+            "type": "string",
+            "format": "date"
+          },
+          "last_bfr": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "renters_insurance_expires": {
+            "type": "string",
+            "format": "date"
+          },
+          "last_local_flight_review": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "certificate": {
+            "type": "string",
+            "enum": [
+              "Pilot",
+              "Instructor",
+              "Remote Pilot"
+            ]
+          },
+          "certificate_type": {
+            "type": "string",
+            "description": "Allowed values depend on the FBO's aviation authority. Base set:\n`Student`, `Sport`, `Recreational`, `Private`, `Commercial`, `ATP`.\nEASA adds `SPL`, `LAPLA`, `LAPLS`, `PPL`.\n"
+          },
+          "issued_by": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "certificate_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255
+          },
+          "date_issued": {
+            "type": "string",
+            "format": "date"
+          },
+          "date_expires": {
+            "type": "string",
+            "format": "date"
+          },
+          "cfi_expiration": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "craft_categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Each entry must be one of the allowed values for the FBO's aviation\nauthority. FAA base set: `Airplane`, `Rotocraft`, `Powered Lift`,\n`Glider`, `Lighter-than-air`, `Weight-Shift Control`. EASA adds `TMG`.\n"
+          },
+          "class_ratings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "FBO-authority dependent enum. Base set includes `Single Engine Land`,\n`Single Engine Sea`, `Multi Engine Land`, `Multi Engine Sea`,\n`Helicopter`, `Gyroplane`, `Airship`, `Gas Balloon`, `Hot Air Balloon`,\n`Weight-Shift Control: Land`, `Weight-Shift Control: Sea`. EASA adds\n`TMG`, `Gliders`.\n"
+          },
+          "endorsements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "FBO-authority dependent enum. Base set: `Tailwheel`, `High Performance`,\n`Complex`, `Solo`, `Pressurized`, `Ground-tow`, `Aero-tow`,\n`Self-launch`. EASA and CASA each extend the list.\n"
+          },
+          "other_ratings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "FBO-authority dependent enum. Base set: `Instrument Airplane`,\n`Instrument Helicopter`, `Instrument Powered Lift`, `Night (EASA)`,\n`Small Unmanned Aircraft System`. EASA adds `Towing`,\n`TMG Night Rating`, `Aerobatic`.\n"
+          }
+        }
+      },
+      "CreateUserRequest": {
+        "description": "Combined user + customer create payload. Accepts both user and customer\nprofile fields.\n\nNotes:\n- If `email` is omitted or empty, a random `@flightcircle.com` address is\n  generated server-side.\n- If `send_customer_verification_email` is `1`, a welcome/verification\n  email is dispatched after the user is created.\n",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CustomerProfileFields"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "send_customer_verification_email": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1
+                ],
+                "description": "When `1`, the server dispatches a verification email to the new\ncustomer. Defaults to no email if omitted.\n"
+              }
+            },
+            "required": [
+              "first_name",
+              "last_name"
+            ]
+          }
+        ]
+      },
+      "CreateUserResponse": {
+        "type": "object",
+        "properties": {
+          "UserID": {
+            "type": "integer"
+          },
+          "CustomerID": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "UserID",
+          "CustomerID"
+        ]
+      },
+      "UpdateCustomerRequest": {
+        "description": "Partial update of a customer profile. Only include fields you wish to\nchange; omitted fields are left untouched. All fields are optional.\n",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CustomerProfileFields"
+          }
+        ]
+      },
+      "UserFileListItem": {
+        "type": "object",
+        "properties": {
+          "ID": {
+            "type": "string",
+            "description": "File identifier."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name for the file."
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of category labels."
+          },
+          "size": {
+            "type": "integer",
+            "description": "File size in bytes."
+          },
+          "created": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "expires": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/IsoDateTime"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Expiration date/time in UTC. null if the file never expires."
+          },
+          "status": {
+            "type": "integer",
+            "description": "File status. 1 = Active.",
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "Relative URL to the download endpoint for this file."
+          }
+        },
+        "required": [
+          "ID",
+          "name",
+          "categories",
+          "size",
+          "created",
+          "status",
+          "url"
+        ]
+      },
+      "UploadFileJsonBody": {
+        "type": "object",
+        "description": "Optional metadata fields passed inside the `data` JSON string when uploading via multipart.\n",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "Display name for the file. Defaults to the filename stem\n(e.g. \"invoice\" for \"invoice.pdf\") if not provided.\n"
+          },
+          "categories": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Comma-separated list of categories."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Array of category strings."
+              }
+            ]
+          },
+          "expires": {
+            "type": "string",
+            "description": "Expiration date/time. Accepts ISO 8601 date (\"2030-06-15\") or\ndatetime (\"2030-06-15T14:30:00Z\", \"2030-06-15T14:30:00-05:00\").\nDate-only values are interpreted as end-of-day in the FBO's timezone.\nStored internally as a UTC Unix timestamp.\n"
+          }
+        }
+      },
+      "UploadFileResponse": {
+        "type": "object",
+        "properties": {
+          "FileID": {
+            "type": "string",
+            "description": "Identifier of the newly created file record."
+          }
+        },
+        "required": [
+          "FileID"
+        ]
+      },
+      "UpdateFileRequest": {
+        "type": "object",
+        "description": "Partial update — at least one of `name`, `categories`, or `expires` must be provided.\n",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "description": "New display name for the file."
+          },
+          "categories": {
+            "oneOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "description": "Comma-separated list of categories."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Array of category strings. Joined into a comma-separated string."
+              }
+            ]
+          },
+          "expires": {
+            "type": "string",
+            "description": "New expiration date/time. Accepts ISO 8601 date (\"2030-06-15\") or\ndatetime (\"2030-06-15T14:30:00Z\", \"2030-06-15T14:30:00-05:00\").\nDate-only values are interpreted as end-of-day in the FBO's timezone.\nPass an empty string to clear expiration.\n"
+          }
+        }
+      },
+      "UpdateFileResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "AircraftItem": {
+        "type": "object",
+        "properties": {
+          "ID": {
+            "type": "string",
+            "description": "Aircraft identifier."
+          },
+          "FboID": {
+            "type": "string"
+          },
+          "tail_number": {
+            "type": "string"
+          },
+          "serial": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "year": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "make": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "example": "Airplane"
+          },
+          "preferred_name": {
+            "type": "string"
+          },
+          "hourly_rate": {
+            "type": "string",
+            "description": "Hourly rental rate. May be \"NaN\" if not configured."
+          },
+          "equipment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "seats": {
+            "type": "string"
+          },
+          "range": {
+            "type": "string"
+          },
+          "engines": {
+            "type": "string"
+          },
+          "hobbs_total": {
+            "type": "string"
+          },
+          "tach_total": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "photo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Filename of the aircraft photo, or null."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1",
+              "2"
+            ],
+            "description": "`0` = offline, `1` = online, `2` = staff only."
+          },
+          "enabled": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ],
+            "description": "`0` = deleted, `1` = enabled."
+          }
+        }
+      },
+      "SquawkItem": {
+        "type": "object",
+        "properties": {
+          "AircraftID": {
+            "type": "string"
+          },
+          "FboID": {
+            "type": "string"
+          },
+          "ID": {
+            "type": "string",
+            "description": "Squawk identifier (hash string)."
+          },
+          "UserID": {
+            "type": "string"
+          },
+          "tail_number": {
+            "type": "string"
+          },
+          "actions_taken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "Squawk status code."
+          }
+        }
+      },
+      "MaintenanceReminderItem": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Reminder label / type (e.g. \"meter required at\", \"date required at\")."
+          },
+          "aircraft": {
+            "type": "string",
+            "description": "Human-readable aircraft name."
+          },
+          "make": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "preferred_name": {
+            "type": "string"
+          },
+          "tail_number": {
+            "type": "string"
+          },
+          "AircraftID": {
+            "type": "string"
+          },
+          "FboID": {
+            "type": "string"
+          },
+          "ID": {
+            "type": "string",
+            "description": "Reminder identifier (hash string)."
+          },
+          "measurement": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Measurement type (e.g. \"meter\", \"date\")."
+          },
+          "meter": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Meter type used (e.g. \"tach\", \"hobbs\")."
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "HTML-formatted notes."
+          },
+          "progress": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Completion percentage as a string (e.g. \"44%\")."
+          },
+          "progress2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "remaining": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Human-readable remaining amount (e.g. \"25 hrs\", \"52 days\")."
+          },
+          "remaining2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "goal_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Target completion date (ISO 8601)."
+          },
+          "goal2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Date of last service (ISO 8601)."
+          },
+          "last": {
+            "description": "Last service value (Unix timestamp or meter reading).",
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next": {
+            "description": "Next service threshold (Unix timestamp or meter value).",
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next2": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "now": {
+            "description": "Current meter reading or timestamp.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timezone_string": {
+            "type": "string",
+            "example": "America/New_York"
+          }
+        }
+      },
+      "MaintenanceRemindersResponse": {
+        "type": "object",
+        "description": "Maintenance reminders split into two groups: upcoming (`reminders`) and\npast-due / expired (`expired`).\n",
+        "properties": {
+          "reminders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaintenanceReminderItem"
+            }
+          },
+          "expired": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaintenanceReminderItem"
+            }
+          }
+        },
+        "required": [
+          "reminders",
+          "expired"
+        ]
+      },
+      "InstructorItem": {
+        "type": "object",
+        "properties": {
+          "ID": {
+            "type": "string"
+          },
+          "FboID": {
+            "type": "string"
+          },
+          "CustomerID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "InstructorID": {
+            "type": "string"
+          },
+          "UserID": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "enabled": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ]
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "middle_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "photo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flight_rate": {
+            "type": "string",
+            "description": "Per-hour flight instruction rate."
+          },
+          "classroom_rate": {
+            "type": "string",
+            "description": "Per-hour ground/classroom instruction rate."
+          },
+          "sort_order": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "show_on_schedule": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "staff_only": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "share_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "share_phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aircraft_checkouts": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "List of aircraft IDs this instructor is checked out on."
+          },
+          "last_rental": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Unix timestamp of last rental."
+          }
+        }
+      },
+      "ScheduleItem": {
+        "type": "object",
+        "properties": {
+          "AircraftID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "FboID": {
+            "type": "string"
+          },
+          "ID": {
+            "type": "string",
+            "description": "Schedule identifier (hash string)."
+          },
+          "InstructorID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "UserID": {
+            "type": "string"
+          },
+          "timezone_string": {
+            "type": "string",
+            "example": "America/New_York"
+          },
+          "arrival_date": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "depart_date": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "reservation_type": {
+            "type": "string",
+            "example": "Primary"
+          },
+          "pilot_name": {
+            "type": "string"
+          },
+          "instructor_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pilot_name_share": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aircraft": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Full aircraft name including year."
+          },
+          "preferred_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tail_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aircraft_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dispatched": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checkedin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "public_notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "private_notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "FlightItem": {
+        "type": "object",
+        "description": "Represents a checked-in flight record.",
+        "properties": {
+          "ScheduleID": {
+            "type": "string",
+            "description": "Parent schedule identifier (hash string)."
+          },
+          "arrival_date": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "depart_date": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "public_notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reservation_type": {
+            "type": "string",
+            "example": "Primary"
+          },
+          "lesson_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "course_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "InstructorID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "AircraftID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "UserID": {
+            "type": "string"
+          },
+          "CheckinID": {
+            "type": "string"
+          },
+          "checkin_date": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "hobbs_in": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hobbs_out": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tach_in": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tach_out": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aircraft_charge": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aircraft_rate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aircraft_rate_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instructor_flight_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instructor_flight_time_charge": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instructor_flight_rate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instructor_ground_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instructor_ground_time_charge": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instructor_ground_rate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CancellationItem": {
+        "type": "object",
+        "properties": {
+          "cancelled_by": {
+            "type": "string",
+            "description": "Full name of the user who cancelled."
+          },
+          "CancelledByID": {
+            "type": "integer"
+          },
+          "cancelled_date": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "depart_date": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "return_date": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "UserID": {
+            "type": "integer"
+          },
+          "ScheduleID": {
+            "type": "string",
+            "description": "Schedule identifier (hash string)."
+          },
+          "notice": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Human-readable notice period (e.g. \"1 hour before\")."
+          },
+          "public_notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancellation_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancellation_notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resource": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Name of the resource (aircraft or other) that was booked."
+          }
+        }
+      },
+      "TaxObject": {
+        "type": "object",
+        "properties": {
+          "percentage": {
+            "type": "string",
+            "description": "Tax rate as a string (e.g. \"3\")."
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "LedgerItem": {
+        "type": "object",
+        "description": "A single ledger entry. Entries sharing the same `InvoiceID` belong to the\nsame transaction.\n\n**To get payments:** filter by `entry_type == \"Payment\"`. Include\n`entry_type == \"Adjustment\"` with `adjustment_type == \"Credit\"` for credits.\n\n**To get charges:** filter by `entry_type == \"Charge\"`. Include\n`entry_type == \"Adjustment\"` with `adjustment_type == \"Debit\"` for debits.\n",
+        "properties": {
+          "InvoiceID": {
+            "type": "string",
+            "description": "Invoice identifier (numeric string or hash string)."
+          },
+          "entry_type": {
+            "type": "string",
+            "enum": [
+              "Payment",
+              "Charge",
+              "Adjustment"
+            ]
+          },
+          "entry_date": {
+            "$ref": "#/components/schemas/IsoDateTime"
+          },
+          "description": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "AircraftID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "receipt_link": {
+            "type": "string",
+            "format": "uri"
+          },
+          "UserID": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string",
+            "description": "Full name of the user."
+          },
+          "amount": {
+            "type": "string",
+            "description": "Total charge for this entry (quantity × unit price + taxes + global taxes).\n"
+          },
+          "adjustment_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "Credit",
+              "Debit"
+            ]
+          },
+          "ItemID": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "AdjustmentID": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Adjustment identifier (hash string)."
+          },
+          "item_quantity": {
+            "type": "string"
+          },
+          "taxes": {
+            "type": "string",
+            "description": "Item-level tax amount."
+          },
+          "taxes_object": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TaxObject"
+            }
+          },
+          "global_taxes": {
+            "type": "string",
+            "description": "Global tax amount."
+          },
+          "global_taxes_object": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TaxObject"
+            }
+          }
+        }
+      },
+      "ItemStoreTax": {
+        "type": "object",
+        "properties": {
+          "taxable_percentage": {
+            "type": "string"
+          },
+          "taxable_agency": {
+            "type": "string"
+          }
+        }
+      },
+      "ItemStoreItem": {
+        "type": "object",
+        "properties": {
+          "ID": {
+            "type": "string"
+          },
+          "FboID": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "example": "Each"
+          },
+          "price": {
+            "type": "string"
+          },
+          "brand": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sort_order": {
+            "type": "string"
+          },
+          "taxes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemStoreTax"
+            }
+          }
+        }
+      },
+      "AdjustmentItem": {
+        "type": "object",
+        "properties": {
+          "ID": {
+            "type": "string",
+            "description": "Adjustment identifier (hash string)."
+          },
+          "FboID": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sign": {
+            "type": "string",
+            "enum": [
+              "Credit",
+              "Debit"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "percentage": {
+            "type": "string",
+            "description": "`1` if percentage-based, `0` if fixed amount."
+          },
+          "enabled": {
+            "type": "string",
+            "enum": [
+              "0",
+              "1"
+            ]
+          }
+        }
+      },
+      "ServiceTrackedItem": {
+        "type": "object",
+        "properties": {
+          "ID": {
+            "type": "string",
+            "description": "Service type identifier (hash string)."
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sort_order": {
+            "type": "string"
+          },
+          "required": {
+            "type": "string",
+            "enum": [
+              "Optional",
+              "Suggested",
+              "Required"
+            ]
+          },
+          "entry_type": {
+            "type": "string",
+            "enum": [
+              "Number",
+              "Text",
+              "Number (cumulative)",
+              "Checkbox"
+            ]
+          },
+          "aircraft": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of AircraftIDs this service applies to."
+          }
+        }
+      },
+      "ServiceTrackedLogItem": {
+        "type": "object",
+        "properties": {
+          "ID": {
+            "type": "string",
+            "description": "Log entry identifier (hash string)."
+          },
+          "ServiceID": {
+            "type": "string",
+            "description": "Service type identifier."
+          },
+          "label": {
+            "type": "string"
+          },
+          "AircraftID": {
+            "type": "string"
+          },
+          "tail_number": {
+            "type": "string"
+          },
+          "UserID": {
+            "type": "string"
+          },
+          "CustomerID": {
+            "type": "string"
+          },
+          "User": {
+            "type": "string",
+            "description": "Full name of the user who logged the entry."
+          },
+          "tracker_value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total_tracker_value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created": {
+            "type": "string",
+            "description": "Creation timestamp (YYYY-MM-DD HH:MM:SS)."
+          },
+          "hobbs": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "tach": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "tach2": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "ttaf": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      },
+      "AccessResponse": {
+        "type": "object",
+        "properties": {
+          "msg": {
+            "type": "string",
+            "example": "Token accepted!"
+          }
+        },
+        "required": [
+          "msg"
+        ]
+      },
+      "ErrorPlainText": {
+        "type": "string",
+        "description": "Plain-text error message."
+      }
+    },
+    "responses": {
+      "403Forbidden": {
+        "description": "Not authorized. The authenticated user lacks permission for this operation.",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorPlainText"
+            },
+            "example": "Not authorized"
+          }
+        }
+      },
+      "404NotFound": {
+        "description": "The requested resource was not found.",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorPlainText"
+            }
+          }
+        }
+      },
+      "400BadRequest": {
+        "description": "Bad request. Invalid input or business rule violation.",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorPlainText"
+            }
+          }
+        }
+      },
+      "422UnprocessableEntity": {
+        "description": "Validation failed. Response body lists each failing assertion.",
+        "content": {
+          "text/plain": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorPlainText"
+            }
+          }
+        }
+      },
+      "429TooManyRequests": {
+        "description": "Rate limit exceeded. Retry after the number of seconds in the Retry-After header.",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds until the current rate limit window resets.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        },
+        "content": {
+          "text/plain": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorPlainText"
+            },
+            "example": "Rate limit exceeded"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/user/describe": {
+      "get": {
+        "operationId": "user_describe_self",
+        "summary": "Describe the authenticated user across all FBOs",
+        "description": "Returns one profile entry per FBO the authenticated user belongs to,\neach including custom fields scoped to that FBO. Returns an empty array\nif the user has no active customer records.\n",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "One profile per FBO the user belongs to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDescribeList"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/user/describe/{FboID}": {
+      "get": {
+        "operationId": "user_describe_by_fbo",
+        "summary": "Describe the authenticated user scoped to an FBO",
+        "description": "Returns the authenticated user's profile with custom fields scoped to the\ngiven FBO. The `FboID` must match the API key's FBO (or the API key must\nhave cross-FBO access).\n",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDescribeObject"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/users/{FboID}": {
+      "get": {
+        "operationId": "users_list_all",
+        "summary": "List all customers for an FBO",
+        "description": "Returns a full list of customers registered with the given FBO, including\nprofile data, certificates, medical records, files, and custom fields.\n\nThe caller must be an employee of `FboID`. Results are ordered by status\n(DESC) then last name (ASC). Dates and times are returned in the FBO's\nconfigured timezone.\n",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of customer records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserListItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/users": {
+      "post": {
+        "operationId": "users_create",
+        "summary": "Create a new user / customer",
+        "description": "Creates a new user account and associated customer record for the FBO\nidentified by the API key.\n\n**Rate limit:** Returns 409 if more than 200 customers are created within\na 24-hour window for the same FBO.\n\nA random password is generated automatically; a welcome/verification email\nis dispatched asynchronously.\n",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "write"
+            ]
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              },
+              "examples": {
+                "minimal": {
+                  "summary": "Minimal request",
+                  "value": {
+                    "first_name": "Jane",
+                    "last_name": "Doe"
+                  }
+                },
+                "full": {
+                  "summary": "Full request",
+                  "value": {
+                    "first_name": "Jane",
+                    "last_name": "Doe",
+                    "middle_name": "M",
+                    "email": "jane.doe@example.com",
+                    "date_of_birth": "1990-04-15",
+                    "address": "123 Runway Rd",
+                    "address2": "Suite 1",
+                    "city": "Tampa",
+                    "state": "FL",
+                    "zip_code": "33601",
+                    "phone": "555-123-4567",
+                    "emergency_contact_name": "John Doe",
+                    "emergency_contact_phone": "555-987-6543",
+                    "company_name": "Acme Aviation"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User and customer created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateUserResponse"
+                },
+                "example": {
+                  "UserID": 4201,
+                  "CustomerID": 1337
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "422": {
+            "description": "Validation failure or business-rule violation. Covers field validation\nfailures, duplicate email, and the daily creation cap (more than\n200 customers created in the last 24 hours for this FBO).\n",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error. Body is a plain-text message.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{UserID}": {
+      "put": {
+        "operationId": "users_update",
+        "summary": "Update a customer profile",
+        "description": "Updates a customer profile. Any subset of profile fields may be provided.\n",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UserID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerRequest"
+              },
+              "examples": {
+                "rename": {
+                  "summary": "Rename only",
+                  "value": {
+                    "first_name": "Jane",
+                    "last_name": "Smith"
+                  }
+                },
+                "address_change": {
+                  "summary": "Address change",
+                  "value": {
+                    "address": "200 Hangar Way",
+                    "city": "Orlando",
+                    "state": "FL",
+                    "zip_code": "32801"
+                  }
+                },
+                "status_change": {
+                  "summary": "Deactivate",
+                  "value": {
+                    "status": "0"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Update applied. Empty response body."
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "422": {
+            "description": "Validation failure or business-rule violation — e.g. invalid field\nvalue or the target user is not a customer of this FBO.\n",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error. Body is a plain-text message.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{UserID}/files": {
+      "get": {
+        "operationId": "user_files_list",
+        "summary": "List files for a user",
+        "description": "Returns all files associated with the given user and the FBO of the API key.\nThe caller must be an employee of that FBO, and the user must be an active\ncustomer (status ≠ 0).\n\nTimestamps are returned in UTC ISO 8601 format. Categories are returned as\nan array of strings. The `url` field in each item points to the download\nendpoint for that file.\n",
+        "tags": [
+          "User Files"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UserID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of file records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserFileListItem"
+                  }
+                },
+                "example": [
+                  {
+                    "ID": "abc123xyz",
+                    "name": "Medical Certificate",
+                    "categories": [
+                      "medical",
+                      "certificates"
+                    ],
+                    "size": 204800,
+                    "created": "2025-03-10T18:22:00Z",
+                    "expires": "2026-03-10T04:59:59Z",
+                    "status": 1,
+                    "url": "/users/42/files/abc123xyz"
+                  }
+                ]
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      },
+      "post": {
+        "operationId": "user_files_upload",
+        "summary": "Upload a file for a user",
+        "description": "Uploads a file and attaches it to the given user record.\n\nSend a `multipart/form-data` request with:\n- `file`: the binary file payload.\n- `data`: a JSON string containing optional metadata fields\n  (`name`, `categories`, `expires`).\n\n**Allowed file extensions:**\n`.txt`, `.jpg`, `.jpeg`, `.gif`, `.png`, `.doc`, `.docx`, `.xls`,\n`.xlsx`, `.pdf`, `.csv`, `.numbers`, `.webp`, `.ozacft`, `.pptx`, `.zip`\n",
+        "tags": [
+          "User Files"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UserID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The file to upload."
+                  },
+                  "data": {
+                    "type": "string",
+                    "description": "JSON string containing optional metadata:\n`name`, `categories`, `expires`.\n",
+                    "example": "{\"name\":\"Medical Certificate\",\"categories\":[\"medical\"],\"expires\":\"2027-01-01\"}"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "File uploaded and record created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadFileResponse"
+                },
+                "example": {
+                  "FileID": "abc123xyz"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized. Either the token lacks the required scope, the caller\nis not an employee of this FBO, or the target user is not an active\ncustomer of this FBO.\n",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed. Possible causes:\n- No file provided\n- `filename` exceeds 255 characters\n- `name` exceeds 255 characters\n- File extension not in the allowed list\n- `expires` is not a valid ISO 8601 date/time\n- File is empty or unreadable\n",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error. Body is a plain-text message.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{UserID}/files/{FileID}": {
+      "get": {
+        "operationId": "user_files_download",
+        "summary": "Download a file",
+        "description": "Redirects to a signed S3 URL for the requested file. The signed URL\nexpires shortly after issuance — follow the redirect immediately.\n\nThe file must belong to the FBO of the API key and the specified user.\n",
+        "tags": [
+          "User Files"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UserID"
+          },
+          {
+            "$ref": "#/components/parameters/FileID"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to signed S3 download URL.",
+            "headers": {
+              "Location": {
+                "description": "Signed S3 URL (short-lived).",
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      },
+      "put": {
+        "operationId": "user_files_update",
+        "summary": "Update file metadata",
+        "description": "Updates one or more metadata fields of an existing file record.\nThe file content itself is not changed.\n\nAt least one of `name`, `categories`, or `expires` must be provided.\n\n`expires` accepts ISO 8601 date (`\"2030-06-15\"`) or datetime\n(`\"2030-06-15T14:30:00-05:00\"`). Date-only values are resolved to\nend-of-day in the FBO's configured timezone, then stored as a UTC\nUnix timestamp.\n",
+        "tags": [
+          "User Files"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UserID"
+          },
+          {
+            "$ref": "#/components/parameters/FileID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFileRequest"
+              },
+              "examples": {
+                "rename": {
+                  "summary": "Rename only",
+                  "value": {
+                    "name": "Updated Medical Certificate"
+                  }
+                },
+                "recategorize": {
+                  "summary": "Change categories",
+                  "value": {
+                    "categories": [
+                      "medical",
+                      "annual"
+                    ]
+                  }
+                },
+                "extend_expiry": {
+                  "summary": "Extend expiration",
+                  "value": {
+                    "expires": "2028-06-15"
+                  }
+                },
+                "full_update": {
+                  "summary": "All fields",
+                  "value": {
+                    "name": "2026 Medical",
+                    "categories": [
+                      "medical"
+                    ],
+                    "expires": "2027-06-15T23:59:59Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File metadata updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateFileResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "description": "File not found or does not belong to this FBO/user.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/422UnprocessableEntity"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error. Body is a plain-text message.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "user_files_delete",
+        "summary": "Delete a file",
+        "description": "Permanently deletes the file record and the underlying S3 object.\nThis operation is irreversible.\n\nThe file must belong to the FBO of the API key and the specified user.\n",
+        "tags": [
+          "User Files"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UserID"
+          },
+          {
+            "$ref": "#/components/parameters/FileID"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "File deleted. No response body."
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "description": "File not found or does not belong to this FBO/user.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          },
+          "500": {
+            "description": "Unexpected server error. Body is a plain-text message.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPlainText"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authorize": {
+      "get": {
+        "operationId": "oauth_authorize",
+        "summary": "Start the OAuth authorization flow",
+        "security": [],
+        "description": "Redirects the user to the Flight Circle login and authorization page.\nThis endpoint is browser-facing — your app should redirect the user's\nbrowser to this URL, not call it from a server.\n\nIf the user is not logged in they will see a login form first. After\nlogging in (or if already authenticated) they will be shown an\nauthorization page where they can approve or deny your app's access.\n\nOn approval, Flight Circle redirects the user back to your registered\n`redirect_uri` with a temporary `code` and the `state` you passed in.\nThat code must be exchanged immediately at `POST /token`.\n\nNote: unlike standard OAuth 2.0, `redirect_uri` is not a parameter here.\nFlight Circle uses the URI you registered with our support team. If none\nhas been registered, it defaults to `http://localhost/example/server.php`.\n",
+        "tags": [
+          "Auth"
+        ],
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Your app's Client ID, issued when you registered with Flight Circle."
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "A unique value you generate for this user (e.g. a random token stored\nin their session). Flight Circle echoes it back unchanged. Use it to\nverify the callback is genuine and to identify which user is completing\nthe flow. Strongly recommended.\n"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "user"
+            },
+            "description": "Space-separated list of scopes to request. Defaults to `user` if omitted.\nExample: `user fbo` or `user fbo write`. See the **Scopes** section for\navailable values and who can grant each one.\n"
+          },
+          {
+            "name": "response_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "code"
+              ],
+              "default": "code"
+            },
+            "description": "Must be `code` if provided. Defaults to `code` automatically."
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirects to the Flight Circle authorization page (or login page if\nthe user is not authenticated). On completion the user is redirected\nback to your `redirect_uri` with `code` and `state` query parameters.\n"
+          },
+          "400": {
+            "description": "Missing or invalid `client_id`."
+          }
+        }
+      }
+    },
+    "/token": {
+      "post": {
+        "operationId": "oauth_token",
+        "summary": "Issue or refresh an access token",
+        "security": [],
+        "description": "Exchanges an authorization `code` for an `access_token` and a\n`refresh_token`, or exchanges a `refresh_token` for a new `access_token`.\n\nAlso available at `POST /access_token` (legacy alias — prefer `/token`).\n\nThe `grant_type` field is optional: the server defaults to\n`authorization_code` when `code` is present and retries with\n`refresh_token` automatically when the code exchange fails.\n",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "client_id",
+                  "client_secret"
+                ],
+                "properties": {
+                  "client_id": {
+                    "type": "string",
+                    "description": "Your app's Client ID."
+                  },
+                  "client_secret": {
+                    "type": "string",
+                    "description": "Your app's Client Secret. Never expose this client-side."
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "The temporary authorization code received from `GET /authorize`.\nProvide either `code` or `refresh_token`, not both.\n"
+                  },
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "A refresh token previously issued by this endpoint.\nProvide either `code` or `refresh_token`, not both.\n"
+                  },
+                  "grant_type": {
+                    "type": "string",
+                    "enum": [
+                      "authorization_code",
+                      "refresh_token"
+                    ],
+                    "description": "Defaults to `authorization_code` when omitted. Set to\n`refresh_token` when exchanging a refresh token.\n"
+                  }
+                }
+              },
+              "examples": {
+                "authorization_code": {
+                  "summary": "First-time authorization",
+                  "value": {
+                    "client_id": "my-client-id",
+                    "client_secret": "my-client-secret",
+                    "code": "abc123temporarycode"
+                  }
+                },
+                "refresh_token": {
+                  "summary": "Renewing an expired access token",
+                  "value": {
+                    "client_id": "my-client-id",
+                    "client_secret": "my-client-secret",
+                    "refresh_token": "def456refreshtoken",
+                    "grant_type": "refresh_token"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens issued successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string",
+                      "description": "Bearer token to include in API requests. Expires after 1 hour."
+                    },
+                    "refresh_token": {
+                      "type": "string",
+                      "description": "Token to obtain a new access token without re-authorizing the user.\nExpires after 180 days; expiry resets on each use.\nOnly returned when exchanging an authorization `code`.\n"
+                    },
+                    "token_type": {
+                      "type": "string",
+                      "example": "Bearer"
+                    },
+                    "expires_in": {
+                      "type": "integer",
+                      "description": "Seconds until the access token expires.",
+                      "example": 3600
+                    }
+                  }
+                },
+                "examples": {
+                  "code_exchange": {
+                    "summary": "Response to authorization code exchange",
+                    "value": {
+                      "access_token": "0253071b6d1cce0d119cc968f6b14ceeecc3bj75",
+                      "refresh_token": "126f4555b483b5e8fae721b773e02fde941a785u",
+                      "token_type": "Bearer",
+                      "expires_in": 3600
+                    }
+                  },
+                  "refresh_exchange": {
+                    "summary": "Response to refresh token exchange",
+                    "value": {
+                      "access_token": "0253071b6d1cce0d119cc968f6b14ceeecc3bj75",
+                      "token_type": "Bearer",
+                      "expires_in": 3600
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Invalid or expired code / refresh token."
+          }
+        }
+      }
+    },
+    "/aircraft/{FboID}": {
+      "get": {
+        "operationId": "aircraft_list",
+        "summary": "List all aircraft for an FBO",
+        "description": "Returns all active aircraft registered to the given FBO.",
+        "tags": [
+          "Aircraft"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of aircraft records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AircraftItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/aircraft/{FboID}/{AircraftID}": {
+      "get": {
+        "operationId": "aircraft_get",
+        "summary": "Get a single aircraft",
+        "description": "Returns the aircraft record for the given AircraftID within the FBO.",
+        "tags": [
+          "Aircraft"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/AircraftID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array containing the matching aircraft record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AircraftItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/squawks/{FboID}": {
+      "get": {
+        "operationId": "squawks_list",
+        "summary": "List all open squawks for an FBO",
+        "description": "Returns all open squawks across all aircraft for the given FBO.",
+        "tags": [
+          "Aircraft"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of squawk records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SquawkItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/squawks/{FboID}/{ID}": {
+      "get": {
+        "operationId": "squawks_get",
+        "summary": "Get squawks by aircraft or squawk ID",
+        "description": "Filters squawks by ID. The `{ID}` parameter is dual-purpose:\n- **Numeric AircraftID** — returns all squawks for that aircraft.\n- **Hash-string SquawkID** — returns the single matching squawk.\n",
+        "tags": [
+          "Aircraft"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/GenericID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of matching squawk records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SquawkItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/maintenancereminders/{FboID}": {
+      "get": {
+        "operationId": "maintenance_reminders_list",
+        "summary": "List all maintenance reminders for an FBO",
+        "description": "Returns all maintenance reminders split into upcoming (`reminders`) and\npast-due (`expired`).\n",
+        "tags": [
+          "Aircraft"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reminders and expired items.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceRemindersResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/maintenancereminders/{FboID}/{ID}": {
+      "get": {
+        "operationId": "maintenance_reminders_get",
+        "summary": "Get maintenance reminders by aircraft or reminder ID",
+        "description": "Filters maintenance reminders by ID. The `{ID}` parameter is dual-purpose:\n- **Numeric AircraftID** — returns all reminders for that aircraft.\n- **Hash-string ReminderID** — returns the single matching reminder.\n\nResponse structure is identical to the FBO-wide list.\n",
+        "tags": [
+          "Aircraft"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/GenericID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reminders and expired items for the given aircraft or reminder.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceRemindersResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/instructors/{FboID}": {
+      "get": {
+        "operationId": "instructors_list",
+        "summary": "List all instructors for an FBO",
+        "description": "Returns all instructors registered with the given FBO.",
+        "tags": [
+          "Flights"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of instructor records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InstructorItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/instructors/{FboID}/{InstructorID}": {
+      "get": {
+        "operationId": "instructors_get",
+        "summary": "Get a single instructor",
+        "description": "Returns the instructor record for the given InstructorID within the FBO.",
+        "tags": [
+          "Flights"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/InstructorID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array containing the matching instructor record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InstructorItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404NotFound"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/schedules/{FboID}/{InstructorID}/{year}/{month}/{day}/{eyear}/{emonth}/{eday}": {
+      "get": {
+        "operationId": "schedules_list",
+        "summary": "List instructor schedules",
+        "description": "Returns reservations for the given instructor within a date range.\n\n`InstructorID` may be the literal string `\"all\"` to return schedules for\nall instructors.\n\n**Date segments are optional from the right.** The server supports truncated\npaths — you may omit trailing segments:\n- `/schedules/{FboID}/{InstructorID}` — returns today and tomorrow.\n- `/schedules/{FboID}/{InstructorID}/{year}` — returns today and tomorrow\n  (year alone acts as the today/tomorrow shortcut).\n- `/schedules/{FboID}/{InstructorID}/{year}/{month}/{day}` — returns from\n  that start date with no defined end.\n- Full path — returns the range from start to end date (inclusive).\n",
+        "tags": [
+          "Flights"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/InstructorID"
+          },
+          {
+            "$ref": "#/components/parameters/PathYear"
+          },
+          {
+            "$ref": "#/components/parameters/PathMonth"
+          },
+          {
+            "$ref": "#/components/parameters/PathDay"
+          },
+          {
+            "$ref": "#/components/parameters/PathEYear"
+          },
+          {
+            "$ref": "#/components/parameters/PathEMonth"
+          },
+          {
+            "$ref": "#/components/parameters/PathEDay"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of schedule records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScheduleItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/flights/{FboID}": {
+      "get": {
+        "operationId": "flights_list",
+        "summary": "List checked-in flights",
+        "description": "Returns flight records (checked-in reservations) for the given FBO within\nthe specified date range. Only flights that have been checked in are\nreturned.\n",
+        "tags": [
+          "Flights"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/QYear"
+          },
+          {
+            "$ref": "#/components/parameters/QMonth"
+          },
+          {
+            "$ref": "#/components/parameters/QDay"
+          },
+          {
+            "$ref": "#/components/parameters/QEYear"
+          },
+          {
+            "$ref": "#/components/parameters/QEMonth"
+          },
+          {
+            "$ref": "#/components/parameters/QEDay"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of flight records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FlightItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/cancellations/{FboID}": {
+      "get": {
+        "operationId": "cancellations_list",
+        "summary": "List cancelled reservations",
+        "description": "Returns cancelled reservation records for the given FBO within the\nspecified date range. The caller must have super admin role or be in a\ngroup with Cancellations report access.\n",
+        "tags": [
+          "Cancellations"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/QYear"
+          },
+          {
+            "$ref": "#/components/parameters/QMonth"
+          },
+          {
+            "$ref": "#/components/parameters/QDay"
+          },
+          {
+            "$ref": "#/components/parameters/QEYear"
+          },
+          {
+            "$ref": "#/components/parameters/QEMonth"
+          },
+          {
+            "$ref": "#/components/parameters/QEDay"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of cancellation records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CancellationItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/ledger/{FboID}/{UserID}": {
+      "get": {
+        "operationId": "ledger_list",
+        "summary": "List ledger entries for a user",
+        "description": "Returns ledger entries for the given user within the specified date range.\nThe caller must have admin role or be in a group with ledger read access.\n\nEntries sharing the same `InvoiceID` belong to the same transaction. See\n`LedgerItem` for guidance on filtering payments vs. charges.\n",
+        "tags": [
+          "Ledger"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/UserID"
+          },
+          {
+            "$ref": "#/components/parameters/QYear"
+          },
+          {
+            "$ref": "#/components/parameters/QMonth"
+          },
+          {
+            "$ref": "#/components/parameters/QDay"
+          },
+          {
+            "$ref": "#/components/parameters/QEYear"
+          },
+          {
+            "$ref": "#/components/parameters/QEMonth"
+          },
+          {
+            "$ref": "#/components/parameters/QEDay"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of ledger entries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LedgerItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/items/{FboID}": {
+      "get": {
+        "operationId": "items_list",
+        "summary": "List store items for an FBO",
+        "description": "Returns all store items (products/services) configured for the given FBO.",
+        "tags": [
+          "Ledger"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of store items.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ItemStoreItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/adjustments/{FboID}": {
+      "get": {
+        "operationId": "adjustments_list",
+        "summary": "List adjustments for an FBO",
+        "description": "Returns all adjustment types (credits and debits) configured for the given FBO.",
+        "tags": [
+          "Ledger"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of adjustment records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdjustmentItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/user/schedule/next/{FboID}": {
+      "get": {
+        "operationId": "user_schedule_next_all",
+        "summary": "Get next upcoming reservation for the FBO",
+        "description": "Returns the next reservation within the next 2 days for any user in the\ngiven FBO.\n",
+        "tags": [
+          "Flights"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of upcoming reservation records (may be empty).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScheduleItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/user/schedule/next/{FboID}/{UserID}": {
+      "get": {
+        "operationId": "user_schedule_next",
+        "summary": "Get next upcoming reservation for a user",
+        "description": "Returns the next reservation within the next 2 days for the given user\nin the given FBO.\n",
+        "tags": [
+          "Flights"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/UserID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array containing the next reservation, or empty if none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScheduleItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/user/schedules/{FboID}/{UserID}/{year}/{month}/{day}/{eyear}/{emonth}/{eday}": {
+      "get": {
+        "operationId": "user_schedules_list",
+        "summary": "List reservations for a user",
+        "description": "Returns reservations for the given user within a date range.\n\n`UserID` may be the literal string `\"all\"` to return schedules across all\nusers for the FBO.\n\n**Date segments are optional from the right.** The server supports truncated\npaths — you may omit trailing segments:\n- `/user/schedules/{FboID}/{UserID}` — returns today and tomorrow.\n- `/user/schedules/{FboID}/{UserID}/{year}` — returns today and tomorrow\n  (year alone acts as the today/tomorrow shortcut).\n- `/user/schedules/{FboID}/{UserID}/{year}/{month}/{day}` — returns from\n  that start date with no defined end.\n- Full path — returns the range from start to end date (inclusive).\n",
+        "tags": [
+          "Flights"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/UserID"
+          },
+          {
+            "$ref": "#/components/parameters/PathYear"
+          },
+          {
+            "$ref": "#/components/parameters/PathMonth"
+          },
+          {
+            "$ref": "#/components/parameters/PathDay"
+          },
+          {
+            "$ref": "#/components/parameters/PathEYear"
+          },
+          {
+            "$ref": "#/components/parameters/PathEMonth"
+          },
+          {
+            "$ref": "#/components/parameters/PathEDay"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of reservation records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScheduleItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/servicestracked/{FboID}": {
+      "get": {
+        "operationId": "services_tracked_list",
+        "summary": "List service types for an FBO",
+        "description": "Returns all services tracked definitions configured for the given FBO.",
+        "tags": [
+          "Services"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of service type definitions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceTrackedItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    },
+    "/servicestracked/log/{FboID}/{AircraftList}/{ServicesList}/{UsersList}/{year}/{month}/{day}/{eyear}/{emonth}/{eday}": {
+      "get": {
+        "operationId": "services_tracked_log",
+        "summary": "Query services tracked log",
+        "description": "Returns service log entries matching the given filters and date range.\nAll path parameters are required.\n\nUse `\"all\"` for `AircraftList`, `ServicesList`, or `UsersList` to include\nall records for that dimension without filtering.\n",
+        "tags": [
+          "Services"
+        ],
+        "security": [
+          {
+            "oauth": [
+              "fbo"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FboID"
+          },
+          {
+            "$ref": "#/components/parameters/AircraftList"
+          },
+          {
+            "$ref": "#/components/parameters/ServicesList"
+          },
+          {
+            "$ref": "#/components/parameters/UsersList"
+          },
+          {
+            "$ref": "#/components/parameters/PathYear"
+          },
+          {
+            "$ref": "#/components/parameters/PathMonth"
+          },
+          {
+            "$ref": "#/components/parameters/PathDay"
+          },
+          {
+            "$ref": "#/components/parameters/PathEYear"
+          },
+          {
+            "$ref": "#/components/parameters/PathEMonth"
+          },
+          {
+            "$ref": "#/components/parameters/PathEDay"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of service log entries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceTrackedLogItem"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/403Forbidden"
+          },
+          "429": {
+            "\\$ref": "#/components/responses/429TooManyRequests"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Token emission and verification endpoints:"
+    },
+    {
+      "name": "Users",
+      "description": "User profile and customer management."
+    },
+    {
+      "name": "User Files",
+      "description": "File upload, download, and metadata management for users."
+    },
+    {
+      "name": "Aircraft",
+      "description": "Aircraft records, squawks, and maintenance reminders."
+    },
+    {
+      "name": "Flights",
+      "description": "Reservations, instructor schedules, checked-in flight records, and instructor information."
+    },
+    {
+      "name": "Cancellations",
+      "description": "Cancelled reservation records."
+    },
+    {
+      "name": "Ledger",
+      "description": "Ledger entries, store items, and adjustments."
+    },
+    {
+      "name": "Services",
+      "description": "Services tracked definitions and log entries."
+    }
+  ]
+}
