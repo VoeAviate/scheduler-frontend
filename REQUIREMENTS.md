@@ -83,7 +83,6 @@ interface AvailabilitySlot {
   day: string; // ISO Date (YYYY-MM-DD)
   startTime: string; // HH:mm
   endTime: string; // HH:mm
-  status: 'selected' | 'confirmed';
 }
 
 ```
@@ -118,4 +117,52 @@ The main student's view is composed of a weekly-based calendar with one hour blo
 The calendar has the name and the year at the top. There are left and right arrows to allow students to move to the next week and the previous week. **It is imperative that previous and next week buttons are only available if they are within the released month.** In other to keep the calendar component size, each week page **MUST** have 7 days, if days of the month are over, days are grayed out and can't be selected by the user.
 
 There is a panel on the right that summarizes students selections, grouping ranges of hours within the same day. The calendar component must occupy most part of the page while the selection summary must take less space.
+
+To ensure consistency across your frontend and backend, you should add a **Date & Time Handling Policy** to your requirements document. This prevents bugs related to time zones, format inconsistencies, and daylight savings.
+
+## 9. Date, Time, and Timestamp Guidelines
+
+To ensure data integrity and consistent user experience across different locales (English/Portuguese), the following standards must be applied:
+
+* **Standard Format:** All dates, times, and timestamps exchanged between the frontend and backend must use the **ISO 8601** format (e.g., `YYYY-MM-DDTHH:mm:ssZ`).
+* **Storage (Backend):** All values must be stored in **UTC (Coordinated Universal Time)**. The system must never store "local" time as the source of truth.
+* **Representation (Frontend):**
+* The frontend is responsible for converting UTC timestamps into the user’s local format based on their selected locale (en-US or pt-BR).
+* Use the native `Intl.DateTimeFormat` API for all date/time rendering.
+
+
+* **Input Handling:** When a user selects a block on the calendar, the application should generate the corresponding ISO 8601 string representing that block in UTC before transmitting it to the Data Layer.
+* **Prohibited Practices:**
+* Do not store dates as custom strings (e.g., "DD/MM/YYYY").
+* Do not perform manual date arithmetic (e.g., `date + 1`). Always use a standardized library (like `date-fns`) or the native `Date` object methods.
+
+### Recommended Implementation Strategy (Angular/TypeScript)
+
+Since you are using **Angular/TypeScript**, follow the following implementation approach to keep the code clean and the requirements strictly enforced:
+
+#### 1. Use `date-fns`
+
+While the native `Date` object is powerful, it is notoriously cumbersome for time manipulation. `date-fns` is modular, tree-shakable, and perfect for Angular.
+
+* **Why:** It treats dates as immutable, reducing bugs.
+
+#### 2. Create a `DateTimeService`
+
+Do not let components handle date logic. Create an Angular Service to centralize this.
+
+```typescript
+// Example: src/app/services/date-time.service.ts
+import { Injectable } from '@angular/core';
+import { format, parseISO } from 'date-fns';
+
+@Injectable({ providedIn: 'root' })
+export class DateTimeService {
+  // Convert UTC ISO string from backend to user's local display
+  formatToLocale(isoString: string, locale: string, options: Intl.DateTimeFormatOptions): string {
+    const date = parseISO(isoString);
+    return new Intl.DateTimeFormat(locale, options).format(date);
+  }
+}
+
+```
 
