@@ -1,0 +1,60 @@
+<div class="template-container" (mouseup)="onMouseUp()">
+  <!-- Header Bar -->
+  <div class="template-header">
+    <button class="btn-back" (click)="onBackToCalendar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      <span>Back to Calendar</span>
+    </button>
+    <div class="header-titles">
+      <h2 class="template-title">Default Weekly Template</h2>
+      <p class="template-desc">
+        Configure a recurring weekly schedule (Sunday to Saturday). You can apply this settings template dynamically to any released month from the calendar summary view.
+      </p>
+    </div>
+  </div>
+
+  <!-- Weekly Template Grid -->
+  <div class="grid-card">
+    <div class="grid-table">
+      <!-- Table Headers -->
+      <div class="grid-thead">
+        <div class="time-header-placeholder"></div>
+        @for (dayName of dayNames(); track dayName) {
+          <div class="day-th">
+            <span class="day-title">{{ dayName }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Table Body -->
+      <div class="grid-tbody">
+        @for (hour of timeSlots(); track hour) {
+          <div class="grid-trow">
+            <div class="time-td">{{ hour }}</div>
+            @for (dayOfWeek of weekDays; track dayOfWeek) {
+              <div 
+                class="cell-td"
+                [class.selected]="isSlotSelected(dayOfWeek, hour)"
+                (mousedown)="onMouseDown(dayOfWeek, hour, $event)"
+                (mouseenter)="onMouseEnter(dayOfWeek, hour)"
+              ></div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Actions -->
+  <div class="template-footer">
+    @if (isSavedSuccess()) {
+      <div class="save-success-alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>Weekly template saved successfully!</span>
+      </div>
+    }
+    <button class="btn-save" (click)="onSaveTemplate()">
+      Save Template
+    </button>
+  </div>
+</div>

@@ -1,0 +1,50 @@
+<div class="admin-card">
+  <div class="card-header-tracker">
+    <h3 class="card-title">Pending Students</h3>
+    <span class="pending-badge">{{ pendingStudents().length }} Pending</span>
+  </div>
+
+  <p class="control-help">The following students have not confirmed their flight availability selections for the next monthly calendar:</p>
+
+  <div class="table-container">
+    <table class="students-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Training Program</th>
+          <th class="actions-th">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (student of pendingStudents(); track student.id) {
+          <tr>
+            <td>
+              <div class="student-info">
+                <span class="student-name">{{ student.firstName }} {{ student.lastName }}</span>
+                <span class="student-email">{{ student.email }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="program-text">{{ student.program }}</span>
+            </td>
+            <td class="actions-td">
+              <button 
+                class="btn-reminder" 
+                [class.sent]="student.reminderSent"
+                (click)="onSendReminder(student.id)"
+                [disabled]="student.reminderSent"
+              >
+                @if (student.reminderSent) {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  Reminder Sent
+                } @else {
+                  Send Reminder
+                }
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

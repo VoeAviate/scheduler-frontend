@@ -1,0 +1,46 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="brand-section">
+      <!-- Aviate Winged Logo placeholder using inline SVG -->
+      <svg class="brand-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10,50 L40,30 L90,30 L50,50 L90,70 L40,70 Z" fill="#ffffff" />
+        <circle cx="45" cy="50" r="10" fill="#000080" stroke="#ffffff" stroke-width="4" />
+      </svg>
+      <h1 class="brand-title">Aviate</h1>
+      <p class="brand-subtitle">Flight Scheduler Availability Panel</p>
+    </div>
+
+    <div class="action-section">
+      @if (isLoading() || isBypassing()) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Connecting securely...</p>
+        </div>
+      } @else {
+        <button class="btn btn-primary" (click)="onLoginWithFlightCircle()">
+          <!-- OAuth icon -->
+          <svg class="btn-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm1,17.93V13h4v-2H13V6H11v5H7v2h4v6.93A8,8,0,0,1,12,19.93Z" fill="currentColor"/>
+          </svg>
+          Sign In with FlightCircle
+        </button>
+
+        <div class="divider">
+          <span>or develop locally</span>
+        </div>
+
+        <div class="bypass-controls">
+          <p class="bypass-title">Bypass credentials (mock data):</p>
+          <div class="bypass-buttons">
+            <button class="btn btn-secondary" (click)="onBypassLogin('STUDENT')">
+              Student Workspace
+            </button>
+            <button class="btn btn-secondary" (click)="onBypassLogin('ADMINISTRATOR')">
+              Admin Workspace
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

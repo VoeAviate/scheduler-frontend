@@ -1,0 +1,31 @@
+<div class="admin-card">
+  <h3 class="card-title">Instructor Compliance Review</h3>
+
+  <p class="control-help">Verification of regulatory policies (minimum rest periods, flight duty time limits) for scheduled instructors:</p>
+
+  <div class="instructor-list">
+    @for (instructor of instructors(); track instructor.id) {
+      <div class="instructor-row" [class.violation-row]="instructor.status === 'VIOLATION'">
+        <div class="instructor-meta">
+          <div class="meta-heading">
+            <span class="instructor-name">{{ instructor.name }}</span>
+            <span class="policy-badge">{{ instructor.policyType }}</span>
+          </div>
+          <p class="policy-details">{{ instructor.details }}</p>
+        </div>
+
+        <div class="status-actions">
+          <span class="status-badge" [class.compliant]="instructor.status === 'COMPLIANT'" [class.violation]="instructor.status === 'VIOLATION'">
+            {{ instructor.status }}
+          </span>
+          
+          @if (instructor.status === 'VIOLATION') {
+            <button class="btn-override" (click)="onAcknowledgeViolation(instructor.id)">
+              Assign Day Off
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

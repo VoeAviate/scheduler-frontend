@@ -1,0 +1,153 @@
+.admin-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-sizing: border-box;
+}
+
+.card-header-tracker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.75rem;
+}
+
+.card-title {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.pending-badge {
+  background: rgba(255, 128, 0, 0.15);
+  color: #ffaa44;
+  border: 1px solid rgba(255, 128, 0, 0.3);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.control-help {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.students-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+
+  th {
+    background: rgba(255, 255, 255, 0.02);
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.95);
+    vertical-align: middle;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  tr:hover td {
+    background: rgba(255, 255, 255, 0.01);
+  }
+}
+
+.student-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.student-name {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.student-email {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.program-text {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.actions-th,
+.actions-td {
+  text-align: right;
+}
+
+.btn-reminder {
+  background: transparent;
+  color: #a3c2ff;
+  border: 1px solid rgba(0, 80, 255, 0.35);
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  font-family: inherit;
+
+  &:hover:not([disabled]) {
+    background: rgba(0, 80, 255, 0.12);
+    border-color: rgba(0, 80, 255, 0.55);
+    color: #ffffff;
+  }
+
+  &.sent {
+    background: rgba(75, 181, 67, 0.08);
+    border-color: rgba(75, 181, 67, 0.2);
+    color: #8ce385;
+    cursor: default;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  &[disabled] {
+    cursor: not-allowed;
+  }
+}
+
+@media (max-width: 600px) {
+  .students-table {
+    th:nth-child(2),
+    td:nth-child(2) {
+      display: none; // hide program text on small mobile screens
+    }
+  }
+}

@@ -1,0 +1,99 @@
+<div class="summary-card">
+  <h3 class="summary-title">Availability Summary</h3>
+
+  <!-- Selections List -->
+  <div class="selections-container">
+    @if (groupedSelections().length === 0) {
+      <div class="empty-state">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <p>No availability slots selected yet.</p>
+        <span class="empty-tip">Click or drag hours on the calendar grid to select your flight times.</span>
+      </div>
+    } @else {
+      <div class="selections-list">
+        @for (dayGroup of groupedSelections(); track dayGroup.day) {
+          <div class="day-group">
+            <span class="group-day-title">{{ dayGroup.formattedDay }}</span>
+            <div class="group-slots">
+              @for (slot of dayGroup.slots; track slot.startTime) {
+                <span class="slot-badge">
+                  {{ slot.startTime }} - {{ slot.endTime }}
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Footer Stats and Actions -->
+  <div class="summary-footer">
+    <div class="stats-panel">
+      <span class="stats-label">Total Selected:</span>
+      <span class="stats-value">{{ availabilityService.totalSelectedHours() }} hrs</span>
+    </div>
+
+    <div class="action-buttons">
+      @if (availabilityService.defaultWeeklyTemplate().length > 0) {
+        <button 
+          class="btn-outline" 
+          (click)="onApplyDefaultTemplate()"
+          [disabled]="availabilityService.isSubmitting()"
+        >
+          Apply Default Week
+        </button>
+      }
+      <button 
+        class="btn-solid" 
+        [disabled]="groupedSelections().length === 0 || availabilityService.isSubmitting()" 
+        (click)="openConfirmModal()"
+      >
+        Confirm Availability
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal Backdrop -->
+<div class="modal-overlay" *ngIf="isModalOpen()">
+  <div class="modal-box">
+    <h3 class="modal-title">Confirm Selections</h3>
+    <p class="modal-disclaimer">
+      Warning: You cannot modify your availability preferences after submission. Please double check your dates and time ranges.
+    </p>
+
+    <div class="modal-review-list">
+      @for (dayGroup of groupedSelections(); track dayGroup.day) {
+        <div class="modal-review-day">
+          <strong>{{ dayGroup.formattedDay }}:</strong>
+          <span>
+            @for (slot of dayGroup.slots; track slot.startTime) {
+              {{ slot.startTime }} - {{ slot.endTime }}{{ !$last ? ', ' : '' }}
+            }
+          </span>
+        </div>
+      }
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" (click)="closeConfirmModal()">Cancel</button>
+      <button class="btn-modal-submit" (click)="onConfirmSubmit()">Submit Preferences</button>
+    </div>
+  </div>
+</div>
+
+<!-- Success Confirmation Check Animation Modal -->
+<div class="modal-overlay success-overlay" *ngIf="availabilityService.isSubmitSuccess()">
+  <div class="modal-box success-box">
+    <div class="success-checkmark-wrapper">
+      <svg class="checkmark-svg" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+        <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+        <path class="checkmark-path" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+      </svg>
+    </div>
+    <h3 class="success-title">Submission Confirmed!</h3>
+    <p class="success-text">Your flight instructions availability preferences have been sent successfully to the scheduler.</p>
+    <button class="btn-solid btn-success-close" (click)="onCloseSuccessCheck()">Done</button>
+  </div>
+</div>

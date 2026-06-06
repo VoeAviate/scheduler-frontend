@@ -1,0 +1,24 @@
+.schedule-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.calendar-pane {
+  min-width: 0; /* Prevents grid layout blowout */
+}
+
+.summary-pane {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .schedule-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}

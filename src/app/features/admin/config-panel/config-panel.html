@@ -1,0 +1,65 @@
+<div class="admin-card">
+  <h3 class="card-title">Scheduler Parameters</h3>
+
+  <form class="config-form" (submit)="$event.preventDefault(); onSaveConfig()">
+    <!-- Row 1: Working Hours -->
+    <div class="form-section">
+      <h4 class="section-title">Daily Working Hours</h4>
+      <div class="form-row">
+        <div class="input-wrapper">
+          <label for="start-hour">Start Time</label>
+          <input type="time" id="start-hour" name="startHour" [(ngModel)]="startHour" required />
+        </div>
+        <div class="input-wrapper">
+          <label for="end-hour">End Time</label>
+          <input type="time" id="end-hour" name="endHour" [(ngModel)]="endHour" required />
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Aircraft Intervals -->
+    <div class="form-section">
+      <h4 class="section-title">Resource Allocations</h4>
+      <div class="input-wrapper">
+        <label for="min-interval">Min Aircraft Interval (minutes)</label>
+        <input type="number" id="min-interval" name="minInterval" [(ngModel)]="minInterval" min="0" step="5" required />
+        <span class="input-hint">Buffer duration between consecutive aircraft usages.</span>
+      </div>
+    </div>
+
+    <!-- Row 3: Durations -->
+    <div class="form-section">
+      <h4 class="section-title">Default Lesson Segments</h4>
+      <div class="form-row duration-row">
+        <div class="input-wrapper">
+          <label for="briefing-time">Briefing (min)</label>
+          <input type="number" id="briefing-time" name="briefingTime" [(ngModel)]="briefingTime" min="0" step="5" required />
+        </div>
+        <div class="input-wrapper">
+          <label for="mission-time">Mission/Flight (min)</label>
+          <input type="number" id="mission-time" name="missionTime" [(ngModel)]="missionTime" min="0" step="5" required />
+        </div>
+        <div class="input-wrapper">
+          <label for="debriefing-time">Debriefing (min)</label>
+          <input type="number" id="debriefing-time" name="debriefingTime" [(ngModel)]="debriefingTime" min="0" step="5" required />
+        </div>
+      </div>
+    </div>
+
+    @if (isSaveSuccess()) {
+      <div class="success-alert">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>Configurations updated and synchronized successfully!</span>
+      </div>
+    }
+
+    <button type="submit" class="btn-primary-admin" [disabled]="isSaving()">
+      @if (isSaving()) {
+        <span class="spinner-admin"></span>
+        Saving Configurations...
+      } @else {
+        Save Configurations
+      }
+    </button>
+  </form>
+</div>

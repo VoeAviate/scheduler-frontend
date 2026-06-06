@@ -1,0 +1,51 @@
+<div class="calendar-wrapper" (mouseup)="onMouseUp()">
+  <!-- Calendar Header Navigation -->
+  <div class="calendar-header">
+    <button class="nav-arrow" [disabled]="!canNavigatePrev()" (click)="navigatePrevWeek()" aria-label="Previous week">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <h2 class="month-title">{{ displayHeader() }}</h2>
+    <button class="nav-arrow" [disabled]="!canNavigateNext()" (click)="navigateNextWeek()" aria-label="Next week">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+  </div>
+
+  <!-- Weekly Grid -->
+  <div class="grid-container">
+    <!-- Grid Column Headers (Weekdays) -->
+    <div class="grid-header">
+      <div class="time-header-placeholder"></div>
+      @for (day of weekDays(); track day.toISOString()) {
+        <div class="day-header" [class.disabled]="isDayDisabled(day)">
+          <span class="day-name">
+            {{ dateTime.formatToLocale(day.toISOString(), { weekday: 'short' }) }}
+          </span>
+          <span class="day-number">
+            {{ dateTime.formatToLocale(day.toISOString(), { day: '2-digit' }) }}
+          </span>
+        </div>
+      }
+    </div>
+
+    <!-- Grid Rows (Hours) -->
+    <div class="grid-body">
+      @for (hour of timeSlots(); track hour) {
+        <div class="grid-row">
+          <!-- Time indicator column -->
+          <div class="time-label">{{ hour }}</div>
+          
+          <!-- Day slot grids -->
+          @for (day of weekDays(); track day.toISOString()) {
+            <div 
+              class="grid-cell"
+              [class.disabled]="isDayDisabled(day)"
+              [class.selected]="isSlotSelected(day, hour)"
+              (mousedown)="onMouseDown(day, hour, $event)"
+              (mouseenter)="onMouseEnter(day, hour)"
+            ></div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -1,0 +1,61 @@
+<div class="admin-card">
+  <h3 class="card-title">Release Monthly Calendar</h3>
+  
+  <div class="current-release-info">
+    <span class="info-label">Active Released Month:</span>
+    <strong class="info-value">
+      @if (configService.releasedMonth(); as released) {
+        {{ released.month }}/{{ released.year }}
+      } @else {
+        None (Closed)
+      }
+    </strong>
+  </div>
+
+  <div class="release-controls">
+    <p class="control-help">Select a month and year to release to student pilots for selection:</p>
+    
+    <div class="select-group">
+      <div class="select-wrapper">
+        <label for="month-select">Month</label>
+        <select id="month-select" (change)="onMonthChange($event)" [value]="selectedMonth()">
+          @for (m of months; track m.value) {
+            <option [value]="m.value">{{ m.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="select-wrapper">
+        <label for="year-select">Year</label>
+        <select id="year-select" (change)="onYearChange($event)" [value]="selectedYear()">
+          @for (y of years; track y) {
+            <option [value]="y">{{ y }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    @if (isReleaseSuccess()) {
+      <div class="success-alert">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <div class="alert-text">
+          <strong>Calendar Released!</strong>
+          <span>Notifications dispatched successfully to students via Email and WhatsApp.</span>
+        </div>
+      </div>
+    }
+
+    <button 
+      class="btn-primary-admin" 
+      [disabled]="isReleasing()" 
+      (click)="onReleaseMonth()"
+    >
+      @if (isReleasing()) {
+        <span class="spinner-admin"></span>
+        Releasing Month...
+      } @else {
+        Release Selected Month
+      }
+    </button>
+  </div>
+</div>

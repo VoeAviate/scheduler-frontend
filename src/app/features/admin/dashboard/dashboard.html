@@ -1,0 +1,17 @@
+<div class="admin-dashboard-container">
+  <!-- Greeting Header -->
+  <div class="dashboard-header" *ngIf="auth.currentUser() as user">
+    <h2 class="dashboard-title">Administration Panel</h2>
+    <p class="dashboard-welcome">
+      Welcome, {{ user.firstName }} {{ user.lastName }} <span>&bull;</span> FBO ID: {{ user.fboId }} <span>&bull;</span> Timezone: {{ user.timezone }}
+    </p>
+  </div>
+
+  <!-- Administration Grid Panels -->
+  <div class="dashboard-grid">
+    <aviate-release-manager class="grid-item"></aviate-release-manager>
+    <aviate-config-panel class="grid-item"></aviate-config-panel>
+    <aviate-status-tracker class="grid-item span-two"></aviate-status-tracker>
+    <aviate-instructor-policies class="grid-item span-two"></aviate-instructor-policies>
+  </div>
+</div>
