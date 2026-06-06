@@ -207,6 +207,49 @@ Angular's modern template control flow block syntax is strictly enforced:
 - **Theming:** The core theme is dark navy blue (`#000080`), configured via CSS custom variables in `src/app/app.scss` with support for high-contrast light themes.
 - **Responsiveness:** Uses CSS Flexbox, Grid, and Container Queries. For example, on screens smaller than `768px`, the layout shifts dynamically from a side-by-side Calendar/Summary view to a vertical stack.
 
+### Transitions, Animations, and Visual States
+
+To provide a premium and dynamic interface, the application utilizes smooth visual feedback loops for user actions, page transitions, and asynchronous operations.
+
+#### 1. Writable Loading & Submitting States (Signals-Driven)
+All asynchronous operations (OAuth2 callback processing, schedule fetching, availability submission) maintain explicit loading signals.
+- **Pattern:** Components or services expose read-only signals (e.g., `isLoading = signal(false)`) which are mapped in HTML templates using Angular's `@if` control flow blocks to render loaders/spinners.
+- **Example Usage in Templates:**
+  ```html
+  <button [disabled]="isSubmitting()" (click)="confirmSelection()">
+    @if (isSubmitting()) {
+      <aviate-spinner size="small"></aviate-spinner>
+    } @else {
+      <span>Confirm Availability</span>
+    }
+  </button>
+  ```
+
+#### 2. Smooth Transitions & Micro-animations
+Animations are configured for key components using hardware-accelerated CSS properties (`transform`, `opacity`) to avoid layout recalculations and repaints.
+- **Hamburger Menu / Drawer:** Slides in from the side using standard CSS transitions.
+  - Offscreen: `transform: translateX(100%); opacity: 0;`
+  - Active: `transform: translateX(0); opacity: 1;`
+  - Timing: `cubic-bezier(0.16, 1, 0.3, 1)` with a 300ms duration for a sleek "springy" entrance.
+- **Calendar Selections:** Smooth HSL color fills when dragging or clicking. Slot boxes use a `150ms ease-out` transition on background colors.
+- **Modal Dialogs:** Modals fade and scale into view to create a layer-depth effect:
+  - Overlay Background: Fades to `rgba(0, 0, 128, 0.4)` (core navy blue tinted overlay).
+  - Modal Content Box: Starts at `scale(0.95)` and transitions to `scale(1)` at `200ms ease-out`.
+
+#### 3. Success Feedback ("Green Check" Notification)
+Once a student availability selection is successfully confirmed and stored on the backend, a modal showing a "Green Check" visual confirmation displays.
+- **Implementation:** The checkmark icon uses SVG animation (`stroke-dasharray` and `stroke-dashoffset` offset keyframes) to draw the checkmark dynamically in 400ms:
+  ```css
+  .checkmark-path {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: drawCheckmark 0.4s ease-in-out forwards;
+  }
+  @keyframes drawCheckmark {
+    to { stroke-dashoffset: 0; }
+  }
+  ```
+
 ---
 
 ## 5. API Resiliency & Interceptor Layer
@@ -324,6 +367,18 @@ Scopes determine operations permitted on behalf of the user:
 - `fbo`: Read-only access to FBO aviation data (aircraft, schedules, members). (Required for Administrator panels).
 - `write`: Create, update, and delete records. (Required for releasing months and updating configurations).
 
+#### Route Access & Login Bootstrap Flow
+
+To guarantee security and correct routing on app start, a set of functional guards protects workspace components:
+
+1. **Root Redirection:** Navigating to `""` (the root domain path) redirects to `/login`.
+2. **Login Guard (`loginGuard`):** Protects the `/login` path. If the user is already authenticated:
+   - Redirects to `/admin` if the user's role is `ADMINISTRATOR`.
+   - Redirects to `/student` if the user's role is `STUDENT`.
+   - Otherwise, resolves and permits displaying the `LoginComponent`.
+3. **Authentication Guard (`authGuard`):** Protects both the `/student` and `/admin` routes. If a user is not logged in, they are redirected to `/login`.
+4. **App Initialization:** On boot, the `AuthService` reads existing sessions from `localStorage` to preserve login states and prevent unnecessary redirects.
+
 ---
 
 ## 6. Date, Time, and Timestamp Guidelines
@@ -382,4 +437,41 @@ export interface AdministratorProfile {
   timezone: string;
   avatarUrl?: string;
 }
+
+---
+
+## 9. Testing Infrastructure
+
+The application features a comprehensive, standalone-friendly testing suite built on **Vitest** and **Angular TestBed** to achieve 95%+ (current: 99.2%+) code coverage.
+
+### 9.1 Test Runner & Environment
+- **Default Runner:** Vitest is utilized as the primary test runner through the `@angular/build:unit-test` Angular CLI builder.
+- **Config file:** The custom [vitest.config.ts](file:///home/henrique/workspace/scheduler-frontend/vitest.config.ts) enables globals, sets the environment to `jsdom`, and manages code coverage parameters.
+- **Exclusions:** Code coverage metrics from `v8` exclude non-JS/TS resource files (`.html`, `.scss`, `.spec.ts`, and routing tables) to calculate exact logic coverage.
+
+### 9.2 Zoneless Async Testing (Mock Timers)
+Because Vitest executes test suites in a zoneless-ready environment, Angular's default `fakeAsync` and `tick` helpers are not supported. Asynchronous logic, debounces, and API delays are tested using Vitest's native mock timers:
+- **Set Up:** `vi.useFakeTimers()` initializes mock timers before the async code is triggered.
+- **Advancement:** `vi.advanceTimersByTime(ms)` steps the system forward to execute scheduled timeouts.
+- **Teardown:** `vi.useRealTimers()` restores native timers after each test.
+
+```typescript
+it('should handle bypass login delays', () => {
+  vi.useFakeTimers();
+  component['onBypassLogin']('STUDENT');
+  
+  vi.advanceTimersByTime(800); // Step through simulated delay
+
+  expect(authServiceSpy.setMockSession).toHaveBeenCalledWith('STUDENT');
+  vi.useRealTimers();
+});
 ```
+
+### 9.3 Mock Routing & Dependency Injection Spies
+To isolate views and layout frames from actual page redirections, tests inject mocked routing setups:
+- **Router Provider:** `provideRouter([])` is supplied in the `TestBed.configureTestingModule` providers.
+- **Spies:** The real `Router` dependency is resolved via `TestBed.inject(Router)` and spied on using `vi.spyOn(router, 'navigate').mockImplementation(() => Promise.resolve(true))` to verify navigation calls.
+
+### 9.4 State & Core Service Mocking
+- **Signals-First Mocking:** Spies for services like `StudentAvailabilityService` provide mock read-only signals (using `signal(initialValue)`) to prevent DOM rendering engines from failing on missing getters.
+- **API Resiliency Verifications:** Tests verify that the exponential back-off pipeline works correctly on network failures by mocking `ApiService` to throw transient errors and testing that it retries 5 times before emitting the final error.
