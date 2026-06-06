@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { DateTimeService } from '../../../core/date-time/date-time.service';
 
 @Component({
   selector: 'aviate-login',
@@ -14,6 +15,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 export class LoginComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  protected readonly dateTime = inject(DateTimeService);
 
   // loading visual states using signals
   protected readonly isLoading = signal<boolean>(false);

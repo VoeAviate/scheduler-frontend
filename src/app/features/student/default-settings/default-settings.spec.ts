@@ -4,7 +4,8 @@ import { DefaultAvailabilityComponent } from './default-settings';
 import { StudentAvailabilityService } from '../../../data/services/student-availability.service';
 import { AdminConfigService } from '../../../data/services/admin-config.service';
 import { DateTimeService } from '../../../core/date-time/date-time.service';
-import { signal } from '@angular/core';
+import { signal, computed } from '@angular/core';
+import { EN_STRINGS, PT_STRINGS } from '../../../core/date-time/translations';
 
 describe('DefaultAvailabilityComponent', () => {
   let component: DefaultAvailabilityComponent;
@@ -25,7 +26,8 @@ describe('DefaultAvailabilityComponent', () => {
     };
 
     dateTimeServiceSpy = {
-      locale: signal('en-US')
+      locale: signal('en-US'),
+      translations: signal(EN_STRINGS)
     };
 
     TestBed.configureTestingModule({

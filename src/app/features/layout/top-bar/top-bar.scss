@@ -4,7 +4,7 @@
   left: 0;
   width: 100%;
   height: 64px;
-  background: #000080;
+  background: var(--bg-top-bar);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -12,7 +12,7 @@
   box-sizing: border-box;
   z-index: 1000;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-  border-bottom: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .logo-group {
@@ -27,55 +27,84 @@
 }
 
 .logo-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   transition: transform 0.3s ease;
 }
 
 .logo-title {
   color: #ffffff;
-  font-family: 'Inter Tight', sans-serif;
-  font-size: 1.5rem;
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.01em;
 }
 
 .nav-controls {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
-.lang-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  cursor: pointer;
+/* Dropdown Language Selector Styles */
+.lang-selector-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+
+  .lang-icon {
+    position: absolute;
+    left: 0.6rem;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: 0.6rem;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid rgba(255, 255, 255, 0.75);
+    pointer-events: none;
+  }
+}
+
+.lang-select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  padding: 0.45rem 1.65rem 0.45rem 1.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
   font-weight: 600;
+  font-family: var(--font-sans);
+  appearance: none;
+  -webkit-appearance: none;
   transition: all 0.2s ease;
-  font-family: inherit;
+  outline: none;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.35);
   }
 
-  .lang-icon {
-    width: 16px;
-    height: 16px;
+  option {
+    background: rgb(0, 0, 34);
+    color: #ffffff;
   }
 }
 
 /* Hamburger Button Settings */
 .menu-btn {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -88,7 +117,7 @@
   padding: 0;
 
   .bar {
-    width: 24px;
+    width: 22px;
     height: 2px;
     background-color: #ffffff;
     border-radius: 2px;
@@ -109,43 +138,46 @@
   }
 }
 
-/* Slide Drawer Overlay */
+/* Floating Hover Drawer Sidebar */
 .drawer-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0);
+  background-color: rgba(15, 23, 42, 0);
   pointer-events: none;
   z-index: 999;
-  transition: background-color 0.4s ease;
+  transition: background-color 0.3s ease;
 
   &.open {
-    background-color: rgba(0, 0, 32, 0.5);
+    background-color: rgba(15, 23, 42, 0.12); /* Subtle dimming overlay */
     pointer-events: auto;
     
     .drawer-container {
-      transform: translateX(0);
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 }
 
 .drawer-container {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 320px;
-  height: 100%;
-  background: #00041d;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
-  transform: translateX(100%);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  top: 74px; /* Floating 10px below the header */
+  right: 24px;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  opacity: 0;
+  transform: translateY(-12px);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
   display: flex;
   flex-direction: column;
-  padding: 2rem 1.5rem;
+  padding: 1.25rem;
   box-sizing: border-box;
+  z-index: 1001; /* Must sit above overlay */
 }
 
 .profile-section {
@@ -153,19 +185,19 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 2rem;
-  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .avatar-wrapper {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  margin-bottom: 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--border-color);
+  margin-bottom: 0.75rem;
+  background: var(--bg-card);
 }
 
 .avatar-img {
@@ -180,41 +212,43 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.75rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: #ffffff;
-  background: linear-gradient(135deg, #0000ff 0%, #000080 100%);
+  background: var(--selection-gradient);
   text-transform: uppercase;
 }
 
 .profile-name {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0 0 0.5rem 0;
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 0.4rem 0;
 }
 
 .profile-tag {
-  background: rgba(0, 0, 255, 0.2);
-  color: #8080ff;
-  border: 1px solid rgba(0, 0, 255, 0.3);
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  background: var(--accent-light);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-light-border);
+  padding: 0.15rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+  display: inline-block;
   
   &.admin-tag {
-    background: rgba(255, 0, 0, 0.15);
-    color: #ff8080;
-    border-color: rgba(255, 0, 0, 0.25);
+    background: var(--danger-bg);
+    color: var(--danger-text);
+    border-color: var(--danger-border);
   }
 }
 
 .profile-detail {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -225,75 +259,83 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  flex: 1;
+  gap: 0.5rem;
+
+  li {
+    width: 100%;
+  }
 
   a {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    color: rgba(255, 255, 255, 0.7);
+    gap: 0.6rem;
+    color: var(--text-muted);
     text-decoration: none;
-    font-size: 1rem;
+    font-size: 0.85rem;
     font-weight: 500;
-    padding: 0.75rem 1rem;
-    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
     transition: all 0.2s ease;
+    box-sizing: border-box;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: #ffffff;
+      background: var(--bg-card-hover);
+      color: var(--text-main);
     }
 
     &.active {
-      background: rgba(0, 0, 255, 0.15);
-      color: #ffffff;
-      border: 1px solid rgba(0, 0, 255, 0.25);
+      background: var(--accent-light);
+      color: var(--accent-primary);
+      border: 1px solid var(--accent-light-border);
+      font-weight: 600;
     }
   }
 
   .link-icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
   }
 }
 
 .drawer-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+  margin-top: 1rem;
 }
 
 .logout-btn {
   width: 100%;
-  background: rgba(255, 80, 80, 0.1);
-  border: 1px solid rgba(255, 80, 80, 0.2);
-  color: #ff8080;
-  padding: 0.75rem 1rem;
-  border-radius: 10px;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  font-size: 0.95rem;
+  gap: 0.5rem;
+  font-size: 0.85rem;
   font-weight: 600;
   transition: all 0.2s ease;
   font-family: inherit;
 
   &:hover {
-    background: rgba(255, 80, 80, 0.2);
-    border-color: rgba(255, 80, 80, 0.35);
+    background: var(--danger-text);
+    border-color: var(--danger-hover);
     color: #ffffff;
   }
 
   .logout-icon {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 }
 
 @media (max-width: 480px) {
   .drawer-container {
-    width: 280px;
+    right: 12px;
+    left: 12px;
+    width: auto;
   }
 }

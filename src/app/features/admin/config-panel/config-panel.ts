@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@a
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminConfigService } from '../../../data/services/admin-config.service';
+import { DateTimeService } from '../../../core/date-time/date-time.service';
 
 @Component({
   selector: 'aviate-config-panel',
@@ -13,6 +14,7 @@ import { AdminConfigService } from '../../../data/services/admin-config.service'
 })
 export class ConfigPanelComponent {
   protected readonly configService = inject(AdminConfigService);
+  protected readonly dateTime = inject(DateTimeService);
 
   // Writable signal tracking local forms changes
   protected readonly isSaving = signal<boolean>(false);

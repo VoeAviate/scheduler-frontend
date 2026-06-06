@@ -16,7 +16,8 @@ describe('CalendarComponent', () => {
     availabilityServiceSpy = {
       selections: signal<AvailabilitySlot[]>([]),
       addSlot: vi.fn(),
-      removeSlot: vi.fn()
+      removeSlot: vi.fn(),
+      currentWeekStart: signal<Date>(new Date())
     };
 
     adminConfigSpy = {

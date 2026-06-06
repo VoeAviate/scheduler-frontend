@@ -4,7 +4,7 @@ import { AdminConfigService } from './admin-config.service';
 import { ApiService } from '../../core/api/api.service';
 import { LoggerService } from '../../core/logging/logger.service';
 import { DateTimeService } from '../../core/date-time/date-time.service';
-import { parseISO, getDay, eachDayOfInterval, format } from 'date-fns';
+import { parseISO, getDay, eachDayOfInterval, format, startOfWeek, endOfWeek } from 'date-fns';
 
 @Injectable({
   providedIn: 'root'
@@ -24,6 +24,9 @@ export class StudentAvailabilityService {
   private readonly _defaultWeeklyTemplate = signal<DefaultAvailability[]>([]);
   private readonly _isSubmitting = signal<boolean>(false);
   private readonly _isSubmitSuccess = signal<boolean>(false); // Triggers "Green Check" visual confirmation
+  
+  // Track currently displayed week's start date
+  public readonly currentWeekStart = signal<Date>(new Date());
 
   // Public read-only signals
   public readonly selections = this._selections.asReadonly();
@@ -85,43 +88,58 @@ export class StudentAvailabilityService {
    * Applies the Default Weekly Template across all days of the released month.
    */
   public applyDefaultAvailability(): void {
-    const releasedMonth = this.adminConfig.releasedMonth();
-    if (!releasedMonth) {
-      this.logger.warn('Cannot apply default template: No released month found.');
-      return;
-    }
-
+    const currentWeek = this.currentWeekStart();
     const template = this._defaultWeeklyTemplate();
     if (template.length === 0) {
       this.logger.warn('Cannot apply default template: Template is empty.');
       return;
     }
 
-    // Determine the date range of the released month
-    const startYear = releasedMonth.year;
-    const startMonth = releasedMonth.month - 1; // JS months are 0-indexed
-    const startDate = new Date(startYear, startMonth, 1);
-    const endDate = new Date(startYear, startMonth + 1, 0); // Last day of month
+    const releasedMonth = this.adminConfig.releasedMonth();
+    if (!releasedMonth) {
+      this.logger.warn('Cannot apply default template: No released month found.');
+      return;
+    }
 
-    const daysInMonth = eachDayOfInterval({ start: startDate, end: endDate });
+    // Determine the date range of the currently displayed week
+    const start = startOfWeek(currentWeek, { weekStartsOn: 0 }); // Sunday
+    const end = endOfWeek(start, { weekStartsOn: 0 }); // Saturday
+
+    const daysInWeek = eachDayOfInterval({ start, end });
+
+    // Get list of day strings for the displayed week (only those within the released month)
+    const displayedWeekDaysStr = daysInWeek
+      .filter(day => {
+        if (!releasedMonth) return false;
+        return day.getMonth() === (releasedMonth.month - 1) && day.getFullYear() === releasedMonth.year;
+      })
+      .map(day => this.dateTime.formatToIsoDate(day));
+
+    // Filter out existing selections that fall in the displayed week
+    const otherWeeksSelections = this._selections().filter(s => !displayedWeekDaysStr.includes(s.day));
+
+    // Generate new slots for the displayed week using the template
     const newSlots: AvailabilitySlot[] = [];
+    daysInWeek.forEach(day => {
+      const dayStr = this.dateTime.formatToIsoDate(day);
+      if (!displayedWeekDaysStr.includes(dayStr)) return; // skip if day is disabled (outside released month)
 
-    daysInMonth.forEach(day => {
       const dayOfWeek = getDay(day); // 0 = Sunday, 1 = Monday, etc.
       const matchedTemplates = template.filter(t => t.dayOfWeek === dayOfWeek);
 
       matchedTemplates.forEach(t => {
         newSlots.push({
-          day: this.dateTime.formatToIsoDate(day),
+          day: dayStr,
           startTime: t.startTime,
           endTime: t.endTime
         });
       });
     });
 
-    this._selections.set(newSlots);
+    // Merge other weeks' selections with the new week slots
+    this._selections.set([...otherWeeksSelections, ...newSlots]);
     this.saveCache();
-    this.logger.trackEvent('apply_default_template', 'StudentAvailability', `Applied ${newSlots.length} slots`);
+    this.logger.trackEvent('apply_default_template', 'StudentAvailability', `Applied ${newSlots.length} slots to week`);
   }
 
   /**

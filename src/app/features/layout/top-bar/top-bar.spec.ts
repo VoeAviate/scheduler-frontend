@@ -3,7 +3,8 @@ import { Router, provideRouter } from '@angular/router';
 import { TopBarComponent } from './top-bar';
 import { AuthService } from '../../../core/auth/auth.service';
 import { DateTimeService } from '../../../core/date-time/date-time.service';
-import { signal } from '@angular/core';
+import { signal, computed } from '@angular/core';
+import { EN_STRINGS, PT_STRINGS } from '../../../core/date-time/translations';
 
 describe('TopBarComponent', () => {
   let component: TopBarComponent;
@@ -26,6 +27,7 @@ describe('TopBarComponent', () => {
 
     dateTimeServiceSpy = {
       locale: signal('en-US'),
+      translations: signal(EN_STRINGS),
       setLocale: vi.fn()
     };
 

@@ -1,9 +1,9 @@
 <div class="admin-dashboard-container">
   <!-- Greeting Header -->
   <div class="dashboard-header" *ngIf="auth.currentUser() as user">
-    <h2 class="dashboard-title">Administration Panel</h2>
+    <h2 class="dashboard-title">{{ dateTime.translations().adminPanel }}</h2>
     <p class="dashboard-welcome">
-      Welcome, {{ user.firstName }} {{ user.lastName }} <span>&bull;</span> FBO ID: {{ user.fboId }} <span>&bull;</span> Timezone: {{ user.timezone }}
+      {{ dateTime.translations().welcome }}, {{ user.firstName }} {{ user.lastName }} <span>&bull;</span> {{ dateTime.translations().fboId }}: {{ user.fboId }} <span>&bull;</span> {{ dateTime.translations().timezone }}: {{ user.timezone }}
     </p>
   </div>
 

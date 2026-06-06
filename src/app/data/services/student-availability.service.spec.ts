@@ -70,7 +70,7 @@ describe('StudentAvailabilityService', () => {
     expect(cached).toEqual(template);
   });
 
-  it('should apply default template to the released month', () => {
+  it('should apply default template to the currently displayed week', () => {
     // July 2026 released month contains 31 days
     // Mondays are dayOfWeek = 1
     // July 2026 has Mondays on 6th, 13th, 20th, 27th
@@ -79,12 +79,23 @@ describe('StudentAvailabilityService', () => {
     const template = [{ dayOfWeek: 1, startTime: '08:00', endTime: '09:00' }];
     service.saveDefaultTemplate(template);
 
+    // Set active week to start on Sunday July 5th, 2026
+    service.currentWeekStart.set(new Date(2026, 6, 5));
     service.applyDefaultAvailability();
 
-    const selections = service.selections();
-    expect(selections.length).toBe(4); // July 2026 has 4 Mondays
+    let selections = service.selections();
+    expect(selections.length).toBe(1); // Only Monday July 6th in this week
     expect(selections[0]).toEqual({ day: '2026-07-06', startTime: '08:00', endTime: '09:00' });
-    expect(selections[3]).toEqual({ day: '2026-07-27', startTime: '08:00', endTime: '09:00' });
+
+    // Navigate to next week starting Sunday July 12th, 2026
+    service.currentWeekStart.set(new Date(2026, 6, 12));
+    service.applyDefaultAvailability();
+
+    selections = service.selections();
+    // Should accumulate and contain both Monday July 6th and Monday July 13th
+    expect(selections.length).toBe(2);
+    expect(selections).toContainEqual({ day: '2026-07-06', startTime: '08:00', endTime: '09:00' });
+    expect(selections).toContainEqual({ day: '2026-07-13', startTime: '08:00', endTime: '09:00' });
   });
 
   it('should confirm availability selections, clear cache on success', () => {

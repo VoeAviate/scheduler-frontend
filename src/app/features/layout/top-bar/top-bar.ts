@@ -44,6 +44,14 @@ export class TopBarComponent {
   }
 
   /**
+   * Updates the application language based on dropdown select selection.
+   */
+  protected onLanguageChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.dateTime.setLocale(select.value as 'en-US' | 'pt-BR');
+  }
+
+  /**
    * Triggers logout and redirects back to Login view.
    */
   protected onLogout(): void {

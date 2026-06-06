@@ -1,18 +1,18 @@
 <div class="admin-card">
   <div class="card-header-tracker">
-    <h3 class="card-title">Pending Students</h3>
-    <span class="pending-badge">{{ pendingStudents().length }} Pending</span>
+    <h3 class="card-title">{{ dateTime.translations().pendingStudents }}</h3>
+    <span class="pending-badge">{{ pendingStudents().length }} {{ dateTime.translations().pendingCount }}</span>
   </div>
 
-  <p class="control-help">The following students have not confirmed their flight availability selections for the next monthly calendar:</p>
+  <p class="control-help">{{ dateTime.translations().pendingStudentsHelp }}</p>
 
   <div class="table-container">
     <table class="students-table">
       <thead>
         <tr>
-          <th>Student</th>
-          <th>Training Program</th>
-          <th class="actions-th">Action</th>
+          <th>{{ dateTime.translations().tableStudent }}</th>
+          <th>{{ dateTime.translations().tableProgram }}</th>
+          <th class="actions-th">{{ dateTime.translations().tableAction }}</th>
         </tr>
       </thead>
       <tbody>
@@ -36,9 +36,9 @@
               >
                 @if (student.reminderSent) {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Reminder Sent
+                  {{ dateTime.translations().reminderSent }}
                 } @else {
-                  Send Reminder
+                  {{ dateTime.translations().sendReminder }}
                 }
               </button>
             </td>

@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { format, parseISO, addHours, addDays, differenceInMinutes, parse, formatISO } from 'date-fns';
+import { EN_STRINGS, PT_STRINGS } from './translations';
 
 @Injectable({
   providedIn: 'root'
@@ -7,6 +8,11 @@ import { format, parseISO, addHours, addDays, differenceInMinutes, parse, format
 export class DateTimeService {
   // Locale state signal (defaults to browser language or Portuguese/English)
   public readonly locale = signal<'en-US' | 'pt-BR'>('en-US');
+
+  // Computed translations signal
+  public readonly translations = computed(() => {
+    return this.locale() === 'pt-BR' ? PT_STRINGS : EN_STRINGS;
+  });
 
   constructor() {
     this.detectLanguagePreference();
@@ -73,6 +79,45 @@ export class DateTimeService {
    */
   public formatToIsoDate(date: Date): string {
     return format(date, 'yyyy-MM-dd');
+  }
+
+  /**
+   * Formats a date specifically for the scheduler summary:
+   * "16 de abril de 2026, terça-feira" in Portuguese
+   * "April 16th, 2026 (Tuesday)" in English
+   */
+  public formatSchedulerDate(isoString: string): string {
+    try {
+      const date = parseISO(isoString);
+      const isPt = this.locale() === 'pt-BR';
+
+      if (isPt) {
+        // Portuguese formatting
+        // "16 de abril de 2026, terça-feira"
+        const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(date); // e.g. "terça-feira"
+        const day = new Intl.DateTimeFormat('pt-BR', { day: 'numeric' }).format(date); // e.g. "16"
+        const month = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(date); // e.g. "abril"
+        const year = new Intl.DateTimeFormat('pt-BR', { year: 'numeric' }).format(date); // e.g. "2026"
+        return `${day} de ${month} de ${year}, ${weekday}`;
+      } else {
+        // English formatting
+        // "April 16th, 2026 (Tuesday)"
+        const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date); // e.g. "Tuesday"
+        const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date); // e.g. "April"
+        const year = new Intl.DateTimeFormat('en-US', { year: 'numeric' }).format(date); // e.g. "2026"
+        
+        // Ordinal suffix for day
+        const dayNum = date.getDate();
+        let suffix = 'th';
+        if (dayNum === 1 || dayNum === 21 || dayNum === 31) suffix = 'st';
+        else if (dayNum === 2 || dayNum === 22) suffix = 'nd';
+        else if (dayNum === 3 || dayNum === 23) suffix = 'rd';
+
+        return `${month} ${dayNum}${suffix}, ${year} (${weekday})`;
+      }
+    } catch {
+      return '';
+    }
   }
 
   /**

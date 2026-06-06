@@ -1,7 +1,8 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminConfigService, ReleasedMonth } from '../../../data/services/admin-config.service';
 import { LoggerService } from '../../../core/logging/logger.service';
+import { DateTimeService } from '../../../core/date-time/date-time.service';
 
 @Component({
   selector: 'aviate-release-manager',
@@ -14,6 +15,7 @@ import { LoggerService } from '../../../core/logging/logger.service';
 export class ReleaseManagerComponent {
   protected readonly configService = inject(AdminConfigService);
   private readonly logger = inject(LoggerService);
+  protected readonly dateTime = inject(DateTimeService);
 
   // loading trigger signals
   protected readonly isReleasing = signal<boolean>(false);
@@ -21,20 +23,15 @@ export class ReleaseManagerComponent {
 
   // Month select options
   protected readonly years = [2026, 2027];
-  protected readonly months = [
-    { value: 1, name: 'January' },
-    { value: 2, name: 'February' },
-    { value: 3, name: 'March' },
-    { value: 4, name: 'April' },
-    { value: 5, name: 'May' },
-    { value: 6, name: 'June' },
-    { value: 7, name: 'July' },
-    { value: 8, name: 'August' },
-    { value: 9, name: 'September' },
-    { value: 10, name: 'October' },
-    { value: 11, name: 'November' },
-    { value: 12, name: 'December' }
-  ];
+  
+  // Computed translated months
+  protected readonly months = computed(() => {
+    const isPt = this.dateTime.locale() === 'pt-BR';
+    const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthNamesPt = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const names = isPt ? monthNamesPt : monthNamesEn;
+    return names.map((name, i) => ({ value: i + 1, name }));
+  });
 
   // Selected state signals
   protected readonly selectedMonth = signal<number>(8); // Defaults to August

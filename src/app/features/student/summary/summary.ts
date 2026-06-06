@@ -58,10 +58,7 @@ export class AvailabilitySummaryComponent {
       // Localized display day string
       let formattedDay = '';
       try {
-        formattedDay = this.dateTime.formatToLocale(
-          `${day}T00:00:00Z`, 
-          { weekday: 'short', month: 'short', day: '2-digit' }
-        );
+        formattedDay = this.dateTime.formatSchedulerDate(`${day}T12:00:00Z`);
       } catch {
         formattedDay = day;
       }

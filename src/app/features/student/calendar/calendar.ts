@@ -33,7 +33,7 @@ export class CalendarComponent {
   protected readonly dateTime = inject(DateTimeService);
 
   // Writable signal tracking the active week's start date
-  protected readonly currentWeekStart = signal<Date>(new Date());
+  protected get currentWeekStart() { return this.availabilityService.currentWeekStart; }
 
   // Track selection gesture states
   private isMouseDown = false;

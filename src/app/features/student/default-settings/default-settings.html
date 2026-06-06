@@ -3,12 +3,12 @@
   <div class="template-header">
     <button class="btn-back" (click)="onBackToCalendar()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-      <span>Back to Calendar</span>
+      <span>{{ dateTime.translations().backToCalendar }}</span>
     </button>
     <div class="header-titles">
-      <h2 class="template-title">Default Weekly Template</h2>
+      <h2 class="template-title">{{ dateTime.translations().defaultWeeklyTemplate }}</h2>
       <p class="template-desc">
-        Configure a recurring weekly schedule (Sunday to Saturday). You can apply this settings template dynamically to any released month from the calendar summary view.
+        {{ dateTime.translations().defaultWeeklyTemplateDesc }}
       </p>
     </div>
   </div>
@@ -50,11 +50,11 @@
     @if (isSavedSuccess()) {
       <div class="save-success-alert">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-        <span>Weekly template saved successfully!</span>
+        <span>{{ dateTime.translations().weeklyTemplateSaved }}</span>
       </div>
     }
     <button class="btn-save" (click)="onSaveTemplate()">
-      Save Template
+      {{ dateTime.translations().saveTemplate }}
     </button>
   </div>
 </div>

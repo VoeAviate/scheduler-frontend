@@ -1,13 +1,58 @@
 /* Global Styles */
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
+:root {
+  /* Colors */
+  --bg-app: #ffffff;
+  --bg-top-bar: rgb(0, 0, 34);
+  --bg-card: #f8fafc;
+  --bg-card-hover: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-white: #ffffff;
+  --border-color: #e2e8f0;
+  
+  --accent-primary: #002266;
+  --accent-hover: #003399;
+  --accent-light: rgba(0, 34, 102, 0.06);
+  --accent-light-border: rgba(0, 34, 102, 0.12);
+  
+  --danger-bg: rgba(239, 68, 68, 0.08);
+  --danger-border: rgba(239, 68, 68, 0.15);
+  --danger-text: #ef4444;
+  --danger-hover: #dc2626;
+  
+  --success-bg: rgba(34, 197, 94, 0.08);
+  --success-border: rgba(34, 197, 94, 0.15);
+  --success-text: #22c55e;
+  
+  /* Fonts - Professional & Classic */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Georgia', 'Times New Roman', serif;
+  
+  /* Grid & Selection colors */
+  --grid-bg-cell: #ffffff;
+  --grid-bg-cell-hover: #f1f5f9;
+  --grid-bg-cell-disabled: #f8fafc;
+  --grid-border-cell: #f1f5f9;
+  
+  --selection-gradient: linear-gradient(135deg, #002266 0%, #000033 100%);
+}
+
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #000022;
-  color: #ffffff;
+  font-family: var(--font-sans);
+  background-color: var(--bg-app);
+  color: var(--text-main);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  font-size: 0.9rem; /* Smaller, classic, professional scale */
+}
+
+h1, h2, h3, h4, .brand-title, .logo-title, .month-title, .summary-title, .card-title, .template-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: var(--text-main);
 }

@@ -112,7 +112,7 @@ describe('AvailabilitySummaryComponent', () => {
   });
 
   it('should fallback to day string if formatting fails', () => {
-    vi.spyOn(dateTimeService, 'formatToLocale').mockImplementation(() => {
+    vi.spyOn(dateTimeService, 'formatSchedulerDate').mockImplementation(() => {
       throw new Error('Format Error');
     });
 
