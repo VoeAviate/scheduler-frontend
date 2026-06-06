@@ -32,5 +32,6 @@ jobs:
         with:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
+          skip_validation: true
           slug: VoeAviate/scheduler-frontend
           verbose: true
