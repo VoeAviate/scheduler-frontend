@@ -33,66 +33,85 @@ The application follows a modular architecture:
 
 ## Getting Started
 
-### Development server
+Follow these instructions to set up, run, and test the Aviate Scheduler frontend on your local development machine.
 
-To start a local development server, run:
+### Prerequisites
 
+You need the following software installed:
+* **Node.js**: Version `22.x` or later (tested with `24.x`).
+* **npm**: Version `10.x` or later (tested with `11.x`).
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd scheduler-frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+### Environment Configuration
+
+The application requires several environment variables to communicate with Flight Circle and the Backend API. These are defined in a `.env` file at the root of the project:
+
+```env
+# Flight Circle API Client Credentials (registered with Flight Circle)
+FLIGHT_CIRCLE_CLIENT_ID="your_flight_circle_client_id"
+FLIGHT_CIRCLE_CLIENT_SECRET="your_flight_circle_client_secret"
+
+# Backend endpoint
+BACKEND_API_URL="http://localhost:3000/api"
+
+# Redirect URI for Flight Circle OAuth2 flow
+FLIGHT_CIRCLE_REDIRECT_URI="http://localhost:4200/auth/callback"
+```
+
+During development, these variables are injected into the build via Angular's builder configuration. Make sure to verify your `.env` file at the root of your project matches the requirements.
+
+### Running Locally
+
+To start the local development server, run:
+```bash
+npm start
+```
+or:
 ```bash
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Once the server is running, navigate to `http://localhost:4200/` in your browser. The application will automatically reload if you modify any of the source files.
 
-### Code scaffolding
+### Testing
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Unit testing is powered by **Vitest** and **jsdom**.
 
+* **Run tests in interactive watch mode** (re-runs on file changes):
+  ```bash
+  npm test
+  ```
+* **Run tests once and exit** (useful for CI pipelines):
+  ```bash
+  npm run test -- --watch=false
+  ```
+* **Run with test coverage report**:
+  Coverage collection is enabled by default via the `v8` provider. Reports are generated in the `coverage/` directory.
+
+### Debugging
+
+* **Source Maps**: Enabled by default in development mode. You can inspect and debug the original TypeScript files directly within browser developer tools (e.g., Chrome DevTools).
+* **Bypass Credentials**: For local development and testing without an active Flight Circle OAuth connection, the login screen includes a "Bypass credentials" section that logs you in with mock `STUDENT` or `ADMINISTRATOR` sessions.
+
+### Building for Production
+
+To compile the production bundles, run:
 ```bash
-ng generate component component-name
+npm run build
 ```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-### Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-### Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-### Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-### Prerequisites
-* Angular CLI
-* Node.js
-
-### Installation
-1. Clone the repository: `git clone <repository-url>`
-2. Install dependencies: `npm install`
-3. Run development server: `ng serve`
+The compiled files will be saved in the `dist/` directory. By default, the production build applies minification, bundle optimization, and caches hashing for optimal speed and size.
 
 ## System Constraints
 
