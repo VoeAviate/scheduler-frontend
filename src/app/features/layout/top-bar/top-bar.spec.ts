@@ -5,6 +5,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { DateTimeService } from '../../../core/date-time/date-time.service';
 import { signal, computed } from '@angular/core';
 import { EN_STRINGS, PT_STRINGS } from '../../../core/date-time/translations';
+import { UserType } from '../../../data/models/user.model';
 
 describe('TopBarComponent', () => {
   let component: TopBarComponent;
@@ -19,9 +20,9 @@ describe('TopBarComponent', () => {
         userId: 101,
         firstName: 'Jane',
         lastName: 'Doe',
-        role: 'STUDENT'
+        role: UserType.Student
       }),
-      userRole: signal('STUDENT'),
+      userRole: signal(UserType.Student),
       isAuthenticated: signal(true)
     };
 

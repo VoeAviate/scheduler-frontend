@@ -3,6 +3,7 @@ import { Router, provideRouter } from '@angular/router';
 import { authGuard, loginGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { signal } from '@angular/core';
+import { UserType } from '../../data/models/user.model';
 
 describe('AuthGuards', () => {
   let authServiceSpy: any;
@@ -11,7 +12,7 @@ describe('AuthGuards', () => {
   beforeEach(() => {
     authServiceSpy = {
       isAuthenticated: signal(false),
-      userRole: signal<string | null>(null)
+      userRole: signal<UserType | null>(null)
     };
 
     TestBed.configureTestingModule({
@@ -63,7 +64,7 @@ describe('AuthGuards', () => {
 
     it('should redirect ADMINISTRATOR to /admin if authenticated', () => {
       authServiceSpy.isAuthenticated.set(true);
-      authServiceSpy.userRole.set('ADMINISTRATOR');
+      authServiceSpy.userRole.set(UserType.Administrator);
 
       const result = TestBed.runInInjectionContext(() => {
         return loginGuard({} as any, {} as any);
@@ -75,7 +76,7 @@ describe('AuthGuards', () => {
 
     it('should redirect STUDENT to /student if authenticated', () => {
       authServiceSpy.isAuthenticated.set(true);
-      authServiceSpy.userRole.set('STUDENT');
+      authServiceSpy.userRole.set(UserType.Student);
 
       const result = TestBed.runInInjectionContext(() => {
         return loginGuard({} as any, {} as any);
@@ -86,3 +87,4 @@ describe('AuthGuards', () => {
     });
   });
 });
+

@@ -4,6 +4,7 @@ import { App } from './app';
 import { AuthService } from './core/auth/auth.service';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { UserType } from './data/models/user.model';
 
 describe('App', () => {
   let authService: AuthService;
@@ -37,9 +38,10 @@ describe('App', () => {
 
   it('should render top bar when authenticated', () => {
     const fixture = TestBed.createComponent(App);
-    authService.setMockSession('STUDENT');
+    authService.setMockSession(UserType.Student);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('aviate-top-bar')).not.toBeNull();
   });
 });
+

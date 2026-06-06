@@ -5,6 +5,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { DateTimeService } from '../../../core/date-time/date-time.service';
 import { signal } from '@angular/core';
 import { AvailabilitySlot } from '../../../data/models/availability.model';
+import { UserType } from '../../../data/models/user.model';
 
 describe('AvailabilitySummaryComponent', () => {
   let component: AvailabilitySummaryComponent;
@@ -29,7 +30,7 @@ describe('AvailabilitySummaryComponent', () => {
         userId: 101,
         firstName: 'Jane',
         lastName: 'Doe',
-        role: 'STUDENT'
+        role: UserType.Student
       })
     };
 

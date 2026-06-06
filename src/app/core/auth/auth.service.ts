@@ -1,8 +1,8 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { UserProfile } from '../../data/models/user.model';
+import { UserProfile, UserType, UserStatus, CustomerStatus } from '../../data/models/user.model';
 import { ApiService } from '../api/api.service';
 import { Observable } from 'rxjs';
-import { tap, switchMap } from 'rxjs/operators';
+import { tap, switchMap, map } from 'rxjs/operators';
 
 declare const process: any;
 
@@ -58,7 +58,59 @@ export class AuthService {
     }).pipe(
       switchMap(res => {
         localStorage.setItem('access_token', res.access_token);
-        return this.apiService.get<UserProfile>('user/describe');
+        // GET /user/describe returns an array of FBO profiles
+        return this.apiService.get<any>('user/describe');
+      }),
+      map(response => {
+        const apiUser = Array.isArray(response) ? response[0] : response;
+        if (!apiUser) {
+          throw new Error('No user profile found');
+        }
+
+        // Robust mapping from API response (PascalCase/snake_case) to internal properties
+        const userId = apiUser.UserID !== undefined ? apiUser.UserID : apiUser.userId;
+        const fboId = apiUser.FboID !== undefined ? apiUser.FboID : apiUser.fboId;
+        const firstName = apiUser.first_name !== undefined ? apiUser.first_name : apiUser.firstName;
+        const lastName = apiUser.last_name !== undefined ? apiUser.last_name : apiUser.lastName;
+        const email = apiUser.email;
+        const timezone = apiUser.timezone_string !== undefined ? apiUser.timezone_string : apiUser.timezone;
+        
+        let role: UserType;
+        const rawRole = apiUser.role || apiUser.custom_fields?.['role'];
+        if (rawRole === 'ADMINISTRATOR' || rawRole === UserType.Administrator) {
+          role = UserType.Administrator;
+        } else {
+          role = UserType.Student;
+        }
+
+        let customerStatus: CustomerStatus | undefined;
+        if (apiUser.status !== undefined) {
+          if (apiUser.status === '0' || apiUser.status === 0) {
+            customerStatus = CustomerStatus.Inactive;
+          } else if (apiUser.status === '1' || apiUser.status === 1) {
+            customerStatus = CustomerStatus.Active;
+          } else if (apiUser.status === '2' || apiUser.status === 2) {
+            customerStatus = CustomerStatus.Pending;
+          }
+        }
+
+        const user: UserProfile = {
+          userId,
+          fboId,
+          firstName,
+          lastName,
+          role,
+          email,
+          timezone: timezone || 'America/New_York',
+          ...(apiUser.avatarUrl ? { avatarUrl: apiUser.avatarUrl } : {}),
+          ...(apiUser.Status ? { status: apiUser.Status as UserStatus } : {}),
+          ...(customerStatus ? { customerStatus } : {}),
+          ...(role === UserType.Student ? {
+            trainingProgram: apiUser.trainingProgram || apiUser.custom_fields?.['trainingProgram'] || { id: 'PPL', name: 'Private Pilot License' }
+          } : {})
+        } as UserProfile;
+
+        return user;
       }),
       tap(user => {
         localStorage.setItem('user_session', JSON.stringify(user));
@@ -79,16 +131,16 @@ export class AuthService {
   /**
    * Simulates authentication (e.g. mock session setting for dev/testing)
    */
-  public setMockSession(role: 'STUDENT' | 'ADMINISTRATOR'): void {
+  public setMockSession(role: UserType): void {
     let mockUser: UserProfile;
 
-    if (role === 'STUDENT') {
+    if (role === UserType.Student) {
       mockUser = {
         userId: 101,
         fboId: 1,
         firstName: 'Jane',
         lastName: 'Doe',
-        role: 'STUDENT',
+        role: UserType.Student,
         email: 'jane.doe@example.com',
         trainingProgram: { id: 'PPL', name: 'Private Pilot License' },
         timezone: 'America/New_York'
@@ -99,7 +151,7 @@ export class AuthService {
         fboId: 1,
         firstName: 'Alex',
         lastName: 'Smith',
-        role: 'ADMINISTRATOR',
+        role: UserType.Administrator,
         email: 'alex.smith@example.com',
         timezone: 'America/New_York'
       };

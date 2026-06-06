@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { DateTimeService } from '../../../core/date-time/date-time.service';
+import { UserType } from '../../../data/models/user.model';
 
 @Component({
   selector: 'aviate-login',
@@ -17,6 +18,7 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly dateTime = inject(DateTimeService);
+  protected readonly UserType = UserType;
 
   // loading visual states using signals
   protected readonly isLoading = signal<boolean>(false);
@@ -44,7 +46,7 @@ export class LoginComponent {
   /**
    * Quick bypass logins for local testing/demo purposes.
    */
-  protected onBypassLogin(role: 'STUDENT' | 'ADMINISTRATOR'): void {
+  protected onBypassLogin(role: UserType): void {
     this.isBypassing.set(true);
     
     // Simulate API delay before resolving
@@ -52,7 +54,7 @@ export class LoginComponent {
       this.authService.setMockSession(role);
       this.isBypassing.set(false);
       
-      if (role === 'ADMINISTRATOR') {
+      if (role === UserType.Administrator) {
         this.router.navigate(['/admin']);
       } else {
         this.router.navigate(['/student']);
@@ -72,7 +74,7 @@ export class LoginComponent {
     this.authService.exchangeCodeForToken(code).subscribe({
       next: (user) => {
         this.isLoading.set(false);
-        if (user.role === 'ADMINISTRATOR') {
+        if (user.role === UserType.Administrator) {
           this.router.navigate(['/admin']);
         } else {
           this.router.navigate(['/student']);
@@ -85,3 +87,4 @@ export class LoginComponent {
     });
   }
 }
+

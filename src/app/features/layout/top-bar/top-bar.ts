@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { DateTimeService } from '../../../core/date-time/date-time.service';
+import { UserType } from '../../../data/models/user.model';
 
 @Component({
   selector: 'aviate-top-bar',
@@ -13,6 +14,7 @@ import { DateTimeService } from '../../../core/date-time/date-time.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TopBarComponent {
+  protected readonly UserType = UserType;
   protected readonly auth = inject(AuthService);
   protected readonly dateTime = inject(DateTimeService);
   private readonly router = inject(Router);

@@ -1,3 +1,4 @@
+import { UserProfile, UserType, UserStatus, CustomerStatus } from '../../data/models/user.model';
 import { TestBed } from '@angular/core/testing';
 import { AuthService } from './auth.service';
 import { ApiService } from '../api/api.service';
@@ -33,22 +34,22 @@ describe('AuthService', () => {
   });
 
   it('should configure mock student sessions correctly', () => {
-    service.setMockSession('STUDENT');
+    service.setMockSession(UserType.Student);
     expect(service.isAuthenticated()).toBe(true);
-    expect(service.userRole()).toBe('STUDENT');
+    expect(service.userRole()).toBe(UserType.Student);
     expect(service.currentUser()?.firstName).toBe('Jane');
     expect(localStorage.getItem('access_token')).toBe('mock_token_value');
   });
 
   it('should configure mock administrator sessions correctly', () => {
-    service.setMockSession('ADMINISTRATOR');
+    service.setMockSession(UserType.Administrator);
     expect(service.isAuthenticated()).toBe(true);
-    expect(service.userRole()).toBe('ADMINISTRATOR');
+    expect(service.userRole()).toBe(UserType.Administrator);
     expect(service.currentUser()?.firstName).toBe('Alex');
   });
 
   it('should clear authentication state on logout', () => {
-    service.setMockSession('STUDENT');
+    service.setMockSession(UserType.Student);
     service.logout();
     expect(service.isAuthenticated()).toBe(false);
     expect(service.currentUser()).toBeNull();
@@ -62,7 +63,7 @@ describe('AuthService', () => {
       fboId: 1,
       firstName: 'Test',
       lastName: 'User',
-      role: 'STUDENT',
+      role: UserType.Student,
       email: 'test@aviate.com',
       timezone: 'UTC'
     };
@@ -96,12 +97,32 @@ describe('AuthService', () => {
   });
 
   it('should exchange authorization code for tokens and user profile', () => {
-    const mockUser = { userId: 202, firstName: 'Test', role: 'STUDENT' };
+    const apiResponse = [
+      {
+        UserID: 202,
+        FboID: 1,
+        first_name: 'Test',
+        last_name: 'User',
+        timezone_string: 'UTC',
+        email: 'test@aviate.com',
+        role: 'STUDENT'
+      }
+    ];
+    const expectedUser: UserProfile = {
+      userId: 202,
+      fboId: 1,
+      firstName: 'Test',
+      lastName: 'User',
+      role: UserType.Student,
+      email: 'test@aviate.com',
+      timezone: 'UTC',
+      trainingProgram: { id: 'PPL', name: 'Private Pilot License' }
+    };
     apiSpy.post.mockReturnValue(of({ access_token: 'new_token_value' }));
-    apiSpy.get.mockReturnValue(of(mockUser));
+    apiSpy.get.mockReturnValue(of(apiResponse));
 
     service.exchangeCodeForToken('auth_code_123').subscribe(user => {
-      expect(user).toEqual(mockUser as any);
+      expect(user).toEqual(expectedUser);
       expect(localStorage.getItem('access_token')).toBe('new_token_value');
       expect(localStorage.getItem('user_session')).toContain('Test');
       expect(service.isAuthenticated()).toBe(true);
@@ -113,6 +134,110 @@ describe('AuthService', () => {
       client_secret: '315e67185aa47608125fddebe0adfed7'
     });
     expect(apiSpy.get).toHaveBeenCalledWith('user/describe');
+  });
+
+  it('should map administrator profile correctly during token exchange', () => {
+    const apiResponse = [
+      {
+        UserID: 303,
+        FboID: 2,
+        first_name: 'Admin',
+        last_name: 'User',
+        timezone_string: 'America/New_York',
+        email: 'admin@aviate.com',
+        role: 'ADMINISTRATOR'
+      }
+    ];
+    const expectedUser: UserProfile = {
+      userId: 303,
+      fboId: 2,
+      firstName: 'Admin',
+      lastName: 'User',
+      role: UserType.Administrator,
+      email: 'admin@aviate.com',
+      timezone: 'America/New_York'
+    };
+    apiSpy.post.mockReturnValue(of({ access_token: 'admin_token' }));
+    apiSpy.get.mockReturnValue(of(apiResponse));
+
+    service.exchangeCodeForToken('auth_code_456').subscribe(user => {
+      expect(user).toEqual(expectedUser);
+      expect(service.userRole()).toBe(UserType.Administrator);
+    });
+  });
+
+  it('should fallback to camelCase profile mapping correctly', () => {
+    const camelUser = {
+      userId: 404,
+      fboId: 1,
+      firstName: 'Camel',
+      lastName: 'Case',
+      role: 'STUDENT',
+      email: 'camel@aviate.com',
+      timezone: 'UTC'
+    };
+    apiSpy.post.mockReturnValue(of({ access_token: 'camel_token' }));
+    apiSpy.get.mockReturnValue(of(camelUser));
+
+    service.exchangeCodeForToken('auth_code_789').subscribe(user => {
+      expect(user.userId).toBe(404);
+      expect(user.firstName).toBe('Camel');
+      expect(user.role).toBe(UserType.Student);
+    });
+  });
+
+
+  it('should map Status and status to enums during token exchange', () => {
+    const apiResponse = [
+      {
+        UserID: 505,
+        FboID: 1,
+        first_name: 'Status',
+        last_name: 'Test',
+        role: 'STUDENT',
+        Status: 'Active',
+        status: '1'
+      }
+    ];
+    apiSpy.post.mockReturnValue(of({ access_token: 'token_status' }));
+    apiSpy.get.mockReturnValue(of(apiResponse));
+
+    service.exchangeCodeForToken('auth_code_status').subscribe(user => {
+      expect(user.status).toBe(UserStatus.Active);
+      expect(user.customerStatus).toBe(CustomerStatus.Active);
+    });
+  });
+
+  it('should map different status variations correctly', () => {
+    const inactiveUser = {
+      UserID: 506,
+      FboID: 1,
+      first_name: 'Inactive',
+      last_name: 'Test',
+      role: 'STUDENT',
+      Status: 'Pending',
+      status: '0'
+    };
+    apiSpy.post.mockReturnValue(of({ access_token: 'token_status_2' }));
+    apiSpy.get.mockReturnValue(of(inactiveUser));
+
+    service.exchangeCodeForToken('auth_code_status_2').subscribe(user => {
+      expect(user.status).toBe(UserStatus.Pending);
+      expect(user.customerStatus).toBe(CustomerStatus.Inactive);
+    });
+
+    const pendingUser = {
+      UserID: 507,
+      FboID: 1,
+      role: 'STUDENT',
+      Status: 'Deleted',
+      status: '2'
+    };
+    apiSpy.get.mockReturnValue(of(pendingUser));
+    service.exchangeCodeForToken('auth_code_status_3').subscribe(user => {
+      expect(user.status).toBe(UserStatus.Deleted);
+      expect(user.customerStatus).toBe(CustomerStatus.Pending);
+    });
   });
 
   it('should clear session if cached session is invalid JSON', () => {

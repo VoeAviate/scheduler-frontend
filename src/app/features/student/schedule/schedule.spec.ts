@@ -5,6 +5,7 @@ import { AdminConfigService } from '../../../data/services/admin-config.service'
 import { AuthService } from '../../../core/auth/auth.service';
 import { DateTimeService } from '../../../core/date-time/date-time.service';
 import { signal } from '@angular/core';
+import { UserType } from '../../../data/models/user.model';
 
 describe('StudentScheduleComponent', () => {
   let availabilityServiceSpy: any;
@@ -28,7 +29,16 @@ describe('StudentScheduleComponent', () => {
     };
 
     authServiceSpy = {
-      currentUser: signal({ userId: 101, firstName: 'Jane', role: 'STUDENT' })
+      currentUser: signal({
+        userId: 101,
+        firstName: 'Jane',
+        lastName: 'Doe',
+        role: UserType.Student,
+        fboId: 1,
+        email: 'jane.doe@example.com',
+        timezone: 'America/New_York',
+        trainingProgram: { id: 'PPL', name: 'Private Pilot License' }
+      })
     };
 
     TestBed.configureTestingModule({

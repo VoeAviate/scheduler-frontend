@@ -31,10 +31,10 @@
         <div class="bypass-controls">
           <p class="bypass-title">{{ dateTime.translations().bypassCredentials }}</p>
           <div class="bypass-buttons">
-            <button class="btn btn-secondary" (click)="onBypassLogin('STUDENT')">
+            <button class="btn btn-secondary" (click)="onBypassLogin(UserType.Student)">
               {{ dateTime.translations().studentWorkspace }}
             </button>
-            <button class="btn btn-secondary" (click)="onBypassLogin('ADMINISTRATOR')">
+            <button class="btn btn-secondary" (click)="onBypassLogin(UserType.Administrator)">
               {{ dateTime.translations().adminWorkspace }}
             </button>
           </div>

@@ -4,6 +4,7 @@ import { LoginComponent } from './login';
 import { AuthService } from '../../../core/auth/auth.service';
 import { signal } from '@angular/core';
 import { BehaviorSubject, of, throwError } from 'rxjs';
+import { UserType } from '../../../data/models/user.model';
 
 describe('LoginComponent', () => {
   let component: LoginComponent;
@@ -17,7 +18,7 @@ describe('LoginComponent', () => {
     authServiceSpy = {
       login: vi.fn(),
       setMockSession: vi.fn(),
-      exchangeCodeForToken: vi.fn().mockReturnValue(of({ userId: 101, role: 'STUDENT' })),
+      exchangeCodeForToken: vi.fn().mockReturnValue(of({ userId: 101, role: UserType.Student })),
       currentUser: signal(null),
       isAuthenticated: signal(false),
       userRole: signal(null)
@@ -72,12 +73,12 @@ describe('LoginComponent', () => {
 
   it('should handle STUDENT bypass login correctly', () => {
     vi.useFakeTimers();
-    component['onBypassLogin']('STUDENT');
+    component['onBypassLogin'](UserType.Student);
     expect(component['isBypassing']()).toBe(true);
 
     vi.advanceTimersByTime(800);
 
-    expect(authServiceSpy.setMockSession).toHaveBeenCalledWith('STUDENT');
+    expect(authServiceSpy.setMockSession).toHaveBeenCalledWith(UserType.Student);
     expect(component['isBypassing']()).toBe(false);
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/student']);
     vi.useRealTimers();
@@ -85,12 +86,12 @@ describe('LoginComponent', () => {
 
   it('should handle ADMINISTRATOR bypass login correctly', () => {
     vi.useFakeTimers();
-    component['onBypassLogin']('ADMINISTRATOR');
+    component['onBypassLogin'](UserType.Administrator);
     expect(component['isBypassing']()).toBe(true);
 
     vi.advanceTimersByTime(800);
 
-    expect(authServiceSpy.setMockSession).toHaveBeenCalledWith('ADMINISTRATOR');
+    expect(authServiceSpy.setMockSession).toHaveBeenCalledWith(UserType.Administrator);
     expect(component['isBypassing']()).toBe(false);
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/admin']);
     vi.useRealTimers();
@@ -109,7 +110,7 @@ describe('LoginComponent', () => {
 
   it('should exchange code for student token and redirect to student dashboard', () => {
     localStorage.setItem('oauth_state', 'expected_state');
-    authServiceSpy.exchangeCodeForToken.mockReturnValue(of({ role: 'STUDENT' }));
+    authServiceSpy.exchangeCodeForToken.mockReturnValue(of({ role: UserType.Student }));
 
     component['handleAuthCallback']('some_code', 'expected_state');
 
@@ -119,7 +120,7 @@ describe('LoginComponent', () => {
 
   it('should exchange code for admin token and redirect to admin dashboard', () => {
     localStorage.setItem('oauth_state', 'expected_state');
-    authServiceSpy.exchangeCodeForToken.mockReturnValue(of({ role: 'ADMINISTRATOR' }));
+    authServiceSpy.exchangeCodeForToken.mockReturnValue(of({ role: UserType.Administrator }));
 
     component['handleAuthCallback']('some_code', 'expected_state');
 
@@ -139,3 +140,4 @@ describe('LoginComponent', () => {
     consoleSpy.mockRestore();
   });
 });
+

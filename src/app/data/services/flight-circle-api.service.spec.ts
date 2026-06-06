@@ -4,6 +4,7 @@ import { FlightCircleApiService } from './flight-circle-api.service';
 import { ApiService } from '../../core/api/api.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { LoggerService } from '../../core/logging/logger.service';
+import { UserType } from '../models/user.model';
 
 describe('FlightCircleApiService', () => {
   let service: FlightCircleApiService;
@@ -38,9 +39,10 @@ describe('FlightCircleApiService', () => {
   });
 
   it('should resolve the correct FboID from the user profile when authenticated', () => {
-    authService.setMockSession('STUDENT'); // Jane Doe has FboID = 1
+    authService.setMockSession(UserType.Student); // Jane Doe has FboID = 1
     expect(service.currentFboId()).toBe(1);
   });
+
 
   it('should call getAircrafts with the correct FboID path parameter', () => {
     service.getAircrafts().subscribe();

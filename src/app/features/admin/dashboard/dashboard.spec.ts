@@ -4,6 +4,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { AdminConfigService } from '../../../data/services/admin-config.service';
 import { LoggerService } from '../../../core/logging/logger.service';
 import { signal } from '@angular/core';
+import { UserType } from '../../../data/models/user.model';
 
 describe('AdminDashboardComponent', () => {
   let authServiceSpy: any;
@@ -16,7 +17,7 @@ describe('AdminDashboardComponent', () => {
         userId: 102,
         firstName: 'Alex',
         lastName: 'Smith',
-        role: 'ADMINISTRATOR'
+        role: UserType.Administrator
       })
     };
 

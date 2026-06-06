@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './auth.service';
+import { UserType } from '../../data/models/user.model';
 
 /**
  * Route guard to ensure the user is authenticated.
@@ -29,7 +30,7 @@ export const loginGuard: CanActivateFn = (route, state) => {
 
   if (authService.isAuthenticated()) {
     const role = authService.userRole();
-    if (role === 'ADMINISTRATOR') {
+    if (role === UserType.Administrator) {
       router.navigate(['/admin']);
     } else {
       router.navigate(['/student']);
@@ -39,3 +40,4 @@ export const loginGuard: CanActivateFn = (route, state) => {
 
   return true;
 };
+
