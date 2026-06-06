@@ -1,6 +1,6 @@
-# Aviate Scheduler Frontend
+# Aviate Scheduler Frontend Requirements
 
-## Overview
+## 1. Overview
 
 The application is called Aviate Scheduler. It makes easier for pilot students to select their availability for next flight instruction sessions to be scheduled. Through this application, students are able to select their availability before the next month starts, the administrator is able to configure a minimal set of parameters to restrict user selections. The goal that is that the backend application will be able to propose a schedule that allocates `instructors` to `students` in `aircrafts` for the next missions of the training program the `student` is participating in.
 
@@ -12,33 +12,41 @@ The application is called Aviate Scheduler. It makes easier for pilot students t
 - `Schedule`: is a time range in a day that has the `presentation time` and `end time`. Between those times, the `Student` is expected to present themselves for the mission, have the `Briefing` time with the instructor, have their flight class (called `Mission`) in a `Aircraft`, and have a `Debriefing` time with the instructor.
 - `Mission`: it is the subset of the `Schedule` in which the practical class take place.
 
-## Technical Stack
+## 2. Technical Stack
 
-The Aviate Scheduler app is Angular-based, using TypeScript as the programming language.
+* **Framework:** Angular using TypeScript.
+* **Architecture:** Modular implementation where each component contains distinct `.html` and `.ts` files, supported by an abstracted **Data Layer** for service communication and state management.
+* **Responsiveness:** Fluid design ensuring compatibility across desktop and mobile devices. Components reorder dynamically; for instance, the mobile view stacks the Summary panel below the Calendar.
+* **Logging:**
+* **Google Analytics:** Tracks all user actions and events.
+* **Application Console:** Logs all errors, warnings, and debug issues. A `Production Mode` toggle in the configuration allows for the global enabling/disabling of these console logs.
+* All timestamps, time and date **MUST** be localized in storage and transport. When rendering, it must take into account the user's timezone.
 
-### Technical guidelines
+## 3. System Constraints
 
-- The application must be implemented in a modular way, making it easier for debuggability and maintainability. Each Angular component have its own `.html` and the `.ts` files.
-- There must be different layers of abstraction: the view components, the service components (responsible for communicating with the backend application).
-- The application is also connected to Google Analytics, logging each action and event a user performs within the application.
+* **Persistence & Caching:** Student availability selections are cached locally (`localStorage`) to ensure progress is maintained across sessions and connectivity drops.
+* **API Resiliency:** All API calls implement an exponential back-off strategy (1s initial delay, factor of 2, 5 retries maximum).
+* **Token Management:** The application automatically handles OAuth2 token renewal for the FlightCircle integration.
+* **Performance:** Optimized for up to 50 concurrent students and 3 administrators, utilizing aggressive client-side caching.
+* **Loading States:** All asynchronous operations (e.g., login, submission) feature visual indicators (e.g., loading spinners) until completion. Successful backend confirmation of preferences triggers a visual "green check" notification.
 
-## Roles
+## 4. Roles
 
 There are different roles that will have access to the application. Each role will have its own view on the app.
 
-### The `Administrator` role
+### The `Administrator`
 
 The administrator role, when logged in, is responsible for managing the release of a month so students are able to login and set their availability preferences.
 
-### The `Student` role
+### The `Student`
 
 Students are able to log into the application using a thirdparty OAuth2 flow, provided by FlightCircle. When any administrator releases a monthly schedule, students are able to login and see the release month, which happens usually 10-15 days before the month starts. In the main view, students have access to a weekly-based calendar of the released month. They are able
 
-## Functional requirements
+## 5. Functional requirements
 
 ### Login
 
-The login of users is made via OAuth2 flow provided by a third-party service (FlightCircle).
+* Authenticated via FlightCircle OAuth2 flow. Language preferences are stored in the user profile, ensuring consistency across devices.
 
 ### Administrator View
 
@@ -48,6 +56,7 @@ Administrators can:
 - Configure minimum intervals in between the usage of aircrafts.
 - See students who are missing to set up their availability for the next month.
 - Double check policy of instructors in terms of regulatory days off.
+- Configures the default briefing, debriefing, and mission times.
 
 ### Students View
 
@@ -55,27 +64,45 @@ Users will see the `Calendar` component and the `Availability Summary` of their 
 
 The calendar component shows a weekly-based calendar with 1-hour blocks ranging from the `start time` and `end time` set by the administrator. The calendar shows the weeks of the released month. The calendar component header has the month displayed in the top with arrows to allow users to navigate through the weeks. It is imperative that only days of the released months are available for users to select.
 
+The selection mechanism supports click-and-hold (drag) and individual point-and-click. Unselected blocks are white/empty; selected blocks are rendered in the core color app color.
+
 Once the `Student` finishes selecting their avaliability for the next month, they can click on `Confirm Availability` button that is displayed at the bottom of the availability summary panel. A modal will show up with the disclaimer that the schedule can't be changed after submitting and shows the summary of the selected availability.
 
 `Student`s also have the possibility of selecting a `Default Availability Setting` that is a week-based schedule, that will be applied to the entire month. There is a button on the menu `Default Availability` that will take the `Student` to a new view that has a similar calendar panel, but it only contains a week, from Sunday to Saturday. `Student` is then able to select the 1-hour blocks they are available for classes, and they can save their preferences.
 
 At the bottom of the `Availability Summary`, `Student`s who have set their `Default Availability` have a button to `Apply Default Availability` that will apply their availability settings week by week, respecting the week days previously set by the `Student`.
 
-## Localization
+## 6. API Interactions
 
-The application can be used in English or Portuguese. All labels are translated to reflect user's preference.
+The system utilizes a centralized Data Layer for all CRUD operations.
 
-## UI Requirements and Guidelines
+### Data Model Example
 
-### Color Palette
+```typescript
+interface AvailabilitySlot {
+  day: string; // ISO Date (YYYY-MM-DD)
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  status: 'selected' | 'confirmed';
+}
 
-The website must be implemented using the core theme based on a darker navy blue (#000080) and follow a ligher theme.
+```
 
-### Smoothness and transitions
+## 7. Localization
 
-Actions like must be smooth and animated using transitions. For example, clicking on the menu button will animate the menu opening.
+The application supports English and Portuguese. All UI labels are dynamic, and user language settings are persisted server-side.
 
-### User navigation
+## 8. UI Requirements & Guidelines
+
+* **Color Palette:** Dark navy blue (#000080) core theme with a contrasting light theme.
+* **Smoothness:** Transitions and animations (e.g., menu opening) must be smooth. For example, clicking on the menu button will animate the menu opening.
+* **Navigation:** A fixed top bar includes:
+  * Aviate logo (left).
+  * Language toggle.
+  * Hamburger menu (Student: profile/name/program/default availbility; Admin: profile/name/role).
+* **Accessibility:** Interactions are designed for both mouse and touch input, ensuring accessibility for all users regardless of input method.
+
+### Navigation
 
 The application have a fixed top bar that does *NOT* overlap with any other UI items. It contains the following items:
 - The Aviate logo at the left side of the bar.
