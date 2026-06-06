@@ -24,11 +24,9 @@ jobs:
       - name: Run Unit Tests with Coverage
         run: npm run test -- --watch=false
 
-      - name: Run tests with ViTest
-        run: npx vitest run --coverage
-
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: VoeAviate/scheduler-frontend
