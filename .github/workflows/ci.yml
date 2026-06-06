@@ -1,4 +1,4 @@
-name: CI - Test and Coverage
+name: Run tests and upload coverage report
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Run Tests and Codecov Upload
+    name: Run tests and collect coverage
     runs-on: ubuntu-latest
 
     steps:
@@ -17,19 +17,18 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run Unit Tests with Coverage
         run: npm run test -- --watch=false
 
+      - name: Run tests with ViTest
+        run: npx vitest run --coverage
+
       - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage/aviate-scheduler/lcov.info
-          fail_ci_if_error: true
+          slug: VoeAviate/scheduler-frontend
