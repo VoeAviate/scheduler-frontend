@@ -1,0 +1,15 @@
+# Codecov configuration
+coverage:
+  status:
+    project:
+      default:
+        target: 95%     # Target 95%+ coverage
+        threshold: 1%   # Allow 1% drop threshold before failing the check
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false

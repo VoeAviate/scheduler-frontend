@@ -1,5 +1,7 @@
 # Aviate Scheduler Frontend
 
+[![codecov](https://codecov.io/gh/VoeAviate/scheduler-frontend/graph/badge.svg)](https://codecov.io/gh/VoeAviate/scheduler-frontend)
+
 Aviate Scheduler is a specialized web application designed for pilot students to manage their availability for upcoming flight instruction sessions. It facilitates a streamlined scheduling process between students and administrators, ensuring efficient allocation of instructors and aircraft for training missions.
 
 ## Project Overview

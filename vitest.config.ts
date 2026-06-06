@@ -5,8 +5,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     coverage: {
+      enabled: true,
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'src/main.ts',
         'src/polyfills.ts',
