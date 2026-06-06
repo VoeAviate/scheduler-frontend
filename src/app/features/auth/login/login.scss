@@ -41,13 +41,10 @@
 }
 
 .brand-logo {
-  width: 64px;
-  height: 64px;
-  background: var(--bg-top-bar);
-  border-radius: 16px;
-  padding: 8px;
-  margin-bottom: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 34, 0.2);
+  height: 40px;
+  width: auto;
+  margin-bottom: 0.5rem;
+  display: block;
 }
 
 .brand-title {

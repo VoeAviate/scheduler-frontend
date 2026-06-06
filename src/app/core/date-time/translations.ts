@@ -7,6 +7,7 @@ export const EN_STRINGS = {
   program: 'Program',
   administrator: 'Administrator',
   student: 'Student',
+  clearWeek: 'Clear Week',
 
   // Login
   brandSubtitle: 'Flight Scheduler Availability Panel',
@@ -96,7 +97,8 @@ export const PT_STRINGS = {
   logOut: 'Sair',
   program: 'Programa',
   administrator: 'Administrador',
-  student: 'Estudante',
+  student: 'Aluno',
+  clearWeek: 'Limpar Semana',
 
   // Login
   brandSubtitle: 'Painel de Disponibilidade de Voo',
@@ -104,7 +106,7 @@ export const PT_STRINGS = {
   signInWithFlightCircle: 'Entrar com FlightCircle',
   orDevelopLocally: 'ou desenvolver localmente',
   bypassCredentials: 'Ignorar credenciais (dados simulados):',
-  studentWorkspace: 'Área do Estudante',
+  studentWorkspace: 'Área do Aluno',
   adminWorkspace: 'Área do Administrador',
 
   // Default Settings
@@ -139,11 +141,11 @@ export const PT_STRINGS = {
   releaseMonthlyCalendar: 'Liberar Calendário Mensal',
   activeReleasedMonth: 'Mês Ativo Liberado',
   noneClosed: 'Nenhum (Fechado)',
-  selectMonthYear: 'Selecione um mês e ano para liberar aos pilotos estudantes para seleção:',
+  selectMonthYear: 'Selecione um mês e ano para liberar aos pilotos alunos para seleção:',
   month: 'Mês',
   year: 'Ano',
   calendarReleased: 'Calendário Liberado!',
-  notificationsDispatched: 'Notificações enviadas com sucesso para os estudantes via E-mail e WhatsApp.',
+  notificationsDispatched: 'Notificações enviadas com sucesso para os alunos via E-mail e WhatsApp.',
   releasingMonth: 'Liberando Mês...',
   releaseSelectedMonth: 'Liberar Mês Selecionado',
 
@@ -164,10 +166,10 @@ export const PT_STRINGS = {
   saveConfigs: 'Salvar Configurações',
 
   // Status Tracker
-  pendingStudents: 'Estudantes Pendentes',
+  pendingStudents: 'Alunos Pendentes',
   pendingCount: 'Pendente(s)',
-  pendingStudentsHelp: 'Os seguintes estudantes não confirmaram suas seleções de disponibilidade de voo para o próximo calendário mensal:',
-  tableStudent: 'Estudante',
+  pendingStudentsHelp: 'Os seguintes alunos não confirmaram suas seleções de disponibilidade de voo para o próximo calendário mensal:',
+  tableStudent: 'Aluno',
   tableProgram: 'Programa de Treinamento',
   tableAction: 'Ação',
   reminderSent: 'Lembrete Enviado',

@@ -98,6 +98,26 @@ describe('StudentAvailabilityService', () => {
     expect(selections).toContainEqual({ day: '2026-07-13', startTime: '08:00', endTime: '09:00' });
   });
 
+  it('should clear availability slots for the currently displayed week', () => {
+    adminConfig.updateReleasedMonth({ year: 2026, month: 7 });
+
+    const slotWeek1 = { day: '2026-07-06', startTime: '08:00', endTime: '09:00' };
+    const slotWeek2 = { day: '2026-07-13', startTime: '08:00', endTime: '09:00' };
+    
+    service.addSlot(slotWeek1);
+    service.addSlot(slotWeek2);
+
+    expect(service.selections().length).toBe(2);
+
+    // Set active week to start on Sunday July 5th, 2026 (covers July 6th)
+    service.currentWeekStart.set(new Date(2026, 6, 5));
+    service.clearWeeklyAvailability();
+
+    expect(service.selections().length).toBe(1);
+    expect(service.selections()).toContainEqual(slotWeek2);
+    expect(service.selections()).not.toContainEqual(slotWeek1);
+  });
+
   it('should confirm availability selections, clear cache on success', () => {
     const slot = { day: '2026-07-01', startTime: '08:00', endTime: '09:00' };
     service.addSlot(slot);

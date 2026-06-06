@@ -1,12 +1,20 @@
 <div class="calendar-wrapper" (mouseup)="onMouseUp()">
-  <!-- Calendar Header Navigation -->
   <div class="calendar-header">
-    <button class="nav-arrow" [disabled]="!canNavigatePrev()" (click)="navigatePrevWeek()" aria-label="Previous week">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-    </button>
-    <h2 class="month-title">{{ displayHeader() }}</h2>
-    <button class="nav-arrow" [disabled]="!canNavigateNext()" (click)="navigateNextWeek()" aria-label="Next week">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    <div class="nav-group">
+      <button class="nav-arrow" [disabled]="!canNavigatePrev()" (click)="navigatePrevWeek()" aria-label="Previous week">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <h2 class="month-title">{{ displayHeader() }}</h2>
+      <button class="nav-arrow" [disabled]="!canNavigateNext()" (click)="navigateNextWeek()" aria-label="Next week">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+    <button 
+      class="btn-clear-week" 
+      [disabled]="!hasSelectionsInCurrentWeek() || availabilityService.isSubmitting()"
+      (click)="onClearWeek()"
+    >
+      {{ dateTime.translations().clearWeek }}
     </button>
   </div>
 

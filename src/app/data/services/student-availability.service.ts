@@ -143,6 +143,34 @@ export class StudentAvailabilityService {
   }
 
   /**
+   * Clears all availability slots for the currently displayed week.
+   */
+  public clearWeeklyAvailability(): void {
+    const currentWeek = this.currentWeekStart();
+    const releasedMonth = this.adminConfig.releasedMonth();
+    if (!releasedMonth) {
+      this.logger.warn('Cannot clear weekly availability: No released month found.');
+      return;
+    }
+
+    const start = startOfWeek(currentWeek, { weekStartsOn: 0 }); // Sunday
+    const end = endOfWeek(start, { weekStartsOn: 0 }); // Saturday
+
+    const daysInWeek = eachDayOfInterval({ start, end });
+
+    const displayedWeekDaysStr = daysInWeek
+      .filter(day => {
+        if (!releasedMonth) return false;
+        return day.getMonth() === (releasedMonth.month - 1) && day.getFullYear() === releasedMonth.year;
+      })
+      .map(day => this.dateTime.formatToIsoDate(day));
+
+    this._selections.update(prev => prev.filter(s => !displayedWeekDaysStr.includes(s.day)));
+    this.saveCache();
+    this.logger.trackEvent('clear_weekly_availability', 'StudentAvailability');
+  }
+
+  /**
    * Confirms and submits the availability slots to the Backend API.
    * On success, clears localStorage cache.
    */

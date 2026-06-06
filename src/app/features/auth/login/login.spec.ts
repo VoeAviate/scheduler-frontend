@@ -44,6 +44,26 @@ describe('LoginComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should render the brand logo picture and sources', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement;
+
+    // Check picture element sources
+    const pictureEl = compiled.querySelector('picture');
+    expect(pictureEl).toBeTruthy();
+    const sources = pictureEl.querySelectorAll('source');
+    expect(sources.length).toBe(2);
+    expect(sources[0].getAttribute('srcset')).toBe('logo_theme_1x.avif 1x, logo_theme_2x.avif 2x');
+    expect(sources[1].getAttribute('srcset')).toBe('logo_theme_1x.webp 1x, logo_theme_2x.webp 2x');
+
+    const imgEl = compiled.querySelector('.brand-logo');
+    expect(imgEl).toBeTruthy();
+    expect(imgEl.getAttribute('src')).toBe('logo_theme_2x.png');
+    expect(imgEl.getAttribute('srcset')).toBe('logo_theme_1x.png 1x, logo_theme_2x.png 2x');
+    expect(imgEl.getAttribute('fetchpriority')).toBe('high');
+  });
+
   it('should call login on AuthService and set isLoading when onLoginWithFlightCircle is called', () => {
     component['onLoginWithFlightCircle']();
     expect(component['isLoading']()).toBe(true);

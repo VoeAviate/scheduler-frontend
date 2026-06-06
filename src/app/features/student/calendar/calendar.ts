@@ -88,6 +88,20 @@ export class CalendarComponent {
     return this.isWeekInReleasedMonth(nextWeek);
   });
 
+  public readonly hasSelectionsInCurrentWeek = computed(() => {
+    const released = this.adminConfig.releasedMonth();
+    if (!released) return false;
+
+    const start = startOfWeek(this.currentWeekStart(), { weekStartsOn: 0 });
+    const end = endOfWeek(start, { weekStartsOn: 0 });
+    const daysInWeek = eachDayOfInterval({ start, end });
+    const displayedWeekDaysStr = daysInWeek
+      .filter(day => day.getMonth() === (released.month - 1) && day.getFullYear() === released.year)
+      .map(day => this.dateTime.formatToIsoDate(day));
+
+    return this.availabilityService.selections().some(slot => displayedWeekDaysStr.includes(slot.day));
+  });
+
   constructor() {
     // Sync current week view when released month changes
     effect(() => {
@@ -106,6 +120,10 @@ export class CalendarComponent {
     if (this.canNavigateNext()) {
       this.currentWeekStart.update(d => addWeeks(d, 1));
     }
+  }
+
+  protected onClearWeek(): void {
+    this.availabilityService.clearWeeklyAvailability();
   }
 
   /**

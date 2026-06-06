@@ -17,7 +17,9 @@ describe('CalendarComponent', () => {
       selections: signal<AvailabilitySlot[]>([]),
       addSlot: vi.fn(),
       removeSlot: vi.fn(),
-      currentWeekStart: signal<Date>(new Date())
+      clearWeeklyAvailability: vi.fn(),
+      currentWeekStart: signal<Date>(new Date()),
+      isSubmitting: signal<boolean>(false)
     };
 
     adminConfigSpy = {
@@ -161,5 +163,43 @@ describe('CalendarComponent', () => {
     const mousedownEvent = { preventDefault: vi.fn() } as any;
     component['onMouseDown'](new Date(), '09:00', mousedownEvent);
     expect(availabilityServiceSpy.addSlot).not.toHaveBeenCalled();
+  });
+
+  it('should compute hasSelectionsInCurrentWeek based on active week selections', () => {
+    // Current active week in test starts Sunday June 28th, 2026. Released month is July 2026.
+    // Days in July inside this week: Wednesday July 1st, Thursday July 2nd, Friday July 3rd, Saturday July 4th.
+    
+    // Initially no selections
+    expect(component.hasSelectionsInCurrentWeek()).toBe(false);
+
+    // Selection in July outside current week (e.g. July 10th)
+    availabilityServiceSpy.selections.set([
+      { day: '2026-07-10', startTime: '09:00', endTime: '10:00' }
+    ]);
+    expect(component.hasSelectionsInCurrentWeek()).toBe(false);
+
+    // Selection in July inside current week (e.g. July 2nd)
+    availabilityServiceSpy.selections.set([
+      { day: '2026-07-02', startTime: '09:00', endTime: '10:00' }
+    ]);
+    expect(component.hasSelectionsInCurrentWeek()).toBe(true);
+  });
+
+  it('should call clearWeeklyAvailability on Clear Week button click', () => {
+    // Enable button by adding a selection in current week
+    availabilityServiceSpy.selections.set([
+      { day: '2026-07-02', startTime: '09:00', endTime: '10:00' }
+    ]);
+    
+    const fixture = TestBed.createComponent(CalendarComponent);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement;
+    const clearBtn = compiled.querySelector('.btn-clear-week');
+    expect(clearBtn).toBeTruthy();
+    expect(clearBtn.disabled).toBe(false);
+
+    clearBtn.click();
+    expect(availabilityServiceSpy.clearWeeklyAvailability).toHaveBeenCalled();
   });
 });
