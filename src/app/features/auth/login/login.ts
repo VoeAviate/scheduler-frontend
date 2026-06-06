@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { DateTimeService } from '../../../core/date-time/date-time.service';
 
@@ -15,11 +15,22 @@ import { DateTimeService } from '../../../core/date-time/date-time.service';
 export class LoginComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   protected readonly dateTime = inject(DateTimeService);
 
   // loading visual states using signals
   protected readonly isLoading = signal<boolean>(false);
   protected readonly isBypassing = signal<boolean>(false);
+
+  constructor() {
+    this.route.queryParams.subscribe(params => {
+      const code = params['code'];
+      const state = params['state'];
+      if (code && state) {
+        this.handleAuthCallback(code, state);
+      }
+    });
+  }
 
   /**
    * Redirects the user to the Flight Circle OAuth2 flow.
@@ -47,5 +58,30 @@ export class LoginComponent {
         this.router.navigate(['/student']);
       }
     }, 800);
+  }
+
+  private handleAuthCallback(code: string, state: string): void {
+    const savedState = localStorage.getItem('oauth_state');
+    if (state !== savedState) {
+      console.error('CSRF state mismatch!');
+      this.isLoading.set(false);
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.authService.exchangeCodeForToken(code).subscribe({
+      next: (user) => {
+        this.isLoading.set(false);
+        if (user.role === 'ADMINISTRATOR') {
+          this.router.navigate(['/admin']);
+        } else {
+          this.router.navigate(['/student']);
+        }
+      },
+      error: (err) => {
+        console.error('Authentication failed:', err);
+        this.isLoading.set(false);
+      }
+    });
   }
 }

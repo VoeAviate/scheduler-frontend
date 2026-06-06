@@ -1,10 +1,17 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { UserProfile } from '../../data/models/user.model';
+import { ApiService } from '../api/api.service';
+import { Observable } from 'rxjs';
+import { tap, switchMap } from 'rxjs/operators';
+
+declare const process: any;
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
+  private readonly apiService = inject(ApiService);
+
   // Source of truth signal for authentication state
   private readonly _currentUser = signal<UserProfile | null>(null);
 
@@ -22,10 +29,9 @@ export class AuthService {
    * In local environment, it uses client_id and redirects to Flight Circle authorize page.
    */
   public login(): void {
-    const clientId = 'mock_client_id_aviate_scheduler_12345'; // Configured client_id
+    const clientId = (typeof process !== 'undefined' && process.env?.['FLIGHT_CIRCLE_CLIENT_ID']) || '2c69a89d4c2c6eb185fcdc9ecd5db9c7';
     const state = this.generateRandomState();
     const scopes = 'user fbo write';
-    const redirectUri = encodeURIComponent('http://localhost:4200/auth/callback');
 
     // Store state in localStorage for callback CSRF verification
     localStorage.setItem('oauth_state', state);
@@ -35,6 +41,30 @@ export class AuthService {
 
     // Redirect user to authorization page
     window.location.href = authUrl;
+  }
+
+  /**
+   * Exchanges authorization code for access token via backend proxy,
+   * then fetches and caches the user profile.
+   */
+  public exchangeCodeForToken(code: string): Observable<UserProfile> {
+    const clientId = (typeof process !== 'undefined' && process.env?.['FLIGHT_CIRCLE_CLIENT_ID']) || '2c69a89d4c2c6eb185fcdc9ecd5db9c7';
+    const clientSecret = (typeof process !== 'undefined' && process.env?.['FLIGHT_CIRCLE_CLIENT_SECRET']) || '315e67185aa47608125fddebe0adfed7';
+
+    return this.apiService.post<{ access_token: string }>('auth/token', {
+      code,
+      client_id: clientId,
+      client_secret: clientSecret
+    }).pipe(
+      switchMap(res => {
+        localStorage.setItem('access_token', res.access_token);
+        return this.apiService.get<UserProfile>('user/describe');
+      }),
+      tap(user => {
+        localStorage.setItem('user_session', JSON.stringify(user));
+        this._currentUser.set(user);
+      })
+    );
   }
 
   /**

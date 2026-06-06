@@ -18,6 +18,10 @@ export const routes: Routes = [
     canActivate: [loginGuard]
   },
   {
+    path: 'auth/callback',
+    component: LoginComponent
+  },
+  {
     path: 'student',
     component: StudentDashboardComponent,
     canActivate: [authGuard],
