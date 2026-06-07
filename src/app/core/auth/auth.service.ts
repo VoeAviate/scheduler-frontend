@@ -3,8 +3,7 @@ import { UserProfile, UserType, UserStatus, CustomerStatus } from '../../data/mo
 import { ApiService } from '../api/api.service';
 import { Observable } from 'rxjs';
 import { tap, switchMap, map } from 'rxjs/operators';
-
-declare const process: any;
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -29,7 +28,8 @@ export class AuthService {
    * In local environment, it uses client_id and redirects to Flight Circle authorize page.
    */
   public login(): void {
-    const clientId = (typeof process !== 'undefined' && process.env?.['FLIGHT_CIRCLE_CLIENT_ID']) || '2c69a89d4c2c6eb185fcdc9ecd5db9c7';
+    const clientId = environment.flightCircleClientId;
+    const redirectUri = environment.flightCircleRedirectUri;
     const state = this.generateRandomState();
     const scopes = 'user fbo write';
 
@@ -37,7 +37,7 @@ export class AuthService {
     localStorage.setItem('oauth_state', state);
 
     // Build the Flight Circle Authorize URL
-    const authUrl = `https://www.flightcircle.com/v1/api/pub/authorize?client_id=${clientId}&state=${state}&scope=${encodeURIComponent(scopes)}&response_type=code`;
+    const authUrl = `https://www.flightcircle.com/v1/api/pub/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scopes)}&response_type=code`;
 
     // Redirect user to authorization page
     window.location.href = authUrl;
@@ -48,8 +48,8 @@ export class AuthService {
    * then fetches and caches the user profile.
    */
   public exchangeCodeForToken(code: string): Observable<UserProfile> {
-    const clientId = (typeof process !== 'undefined' && process.env?.['FLIGHT_CIRCLE_CLIENT_ID']) || '2c69a89d4c2c6eb185fcdc9ecd5db9c7';
-    const clientSecret = (typeof process !== 'undefined' && process.env?.['FLIGHT_CIRCLE_CLIENT_SECRET']) || '315e67185aa47608125fddebe0adfed7';
+    const clientId = environment.flightCircleClientId;
+    const clientSecret = environment.flightCircleClientSecret;
 
     return this.apiService.post<{ access_token: string }>('auth/token', {
       code,

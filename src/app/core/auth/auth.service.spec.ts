@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { AuthService } from './auth.service';
 import { ApiService } from '../api/api.service';
 import { of } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -90,7 +91,8 @@ describe('AuthService', () => {
     service.login();
 
     expect(mockLocation.href).toContain('https://www.flightcircle.com/v1/api/pub/authorize');
-    expect(mockLocation.href).toContain('client_id=2c69a89d4c2c6eb185fcdc9ecd5db9c7');
+    expect(mockLocation.href).toContain(`client_id=${environment.flightCircleClientId}`);
+    expect(mockLocation.href).toContain(`redirect_uri=${encodeURIComponent(environment.flightCircleRedirectUri)}`);
     expect(localStorage.getItem('oauth_state')).not.toBeNull();
 
     vi.unstubAllGlobals();
@@ -130,8 +132,8 @@ describe('AuthService', () => {
 
     expect(apiSpy.post).toHaveBeenCalledWith('auth/token', {
       code: 'auth_code_123',
-      client_id: '2c69a89d4c2c6eb185fcdc9ecd5db9c7',
-      client_secret: '315e67185aa47608125fddebe0adfed7'
+      client_id: environment.flightCircleClientId,
+      client_secret: environment.flightCircleClientSecret
     });
     expect(apiSpy.get).toHaveBeenCalledWith('user/describe');
   });

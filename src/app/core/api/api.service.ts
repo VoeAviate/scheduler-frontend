@@ -1,8 +1,9 @@
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
-import { Observable, timer, throwError } from 'rxjs';
-import { retry, catchError } from 'rxjs/operators';
+import { Observable, throwError, timer } from 'rxjs';
+import { catchError, retry } from 'rxjs/operators';
 import { LoggerService } from '../logging/logger.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +13,7 @@ export class ApiService {
   private readonly logger = inject(LoggerService);
 
   // Read backend base URL from local environment configuration or fall back to localhost
-  private readonly baseUrl = 'http://localhost:3000/api';
+  private readonly baseUrl = environment.backendApiUrl || 'http://localhost:8000/v1/api';
 
   /**
    * Resilient HTTP GET wrapper with exponential back-off retry logic.
@@ -97,7 +98,7 @@ export class ApiService {
    */
   private handleError(error: HttpErrorResponse): Observable<never> {
     let errorMessage = 'An unknown network error occurred';
-    
+
     if (error.error instanceof ErrorEvent) {
       // Client-side or network error
       errorMessage = `Connection error: ${error.error.message}`;

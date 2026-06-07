@@ -31,13 +31,7 @@
             ],
             "styles": [
               "src/styles.scss"
-            ],
-            "define": {
-              "process.env.FLIGHT_CIRCLE_CLIENT_ID": "\"2c69a89d4c2c6eb185fcdc9ecd5db9c7\"",
-              "process.env.FLIGHT_CIRCLE_CLIENT_SECRET": "\"315e67185aa47608125fddebe0adfed7\"",
-              "process.env.FLIGHT_CIRCLE_REDIRECT_URI": "\"http://localhost:4200/auth/callback\"",
-              "process.env.BACKEND_API_URL": "\"http://localhost:3000/api\""
-            }
+            ]
           },
           "configurations": {
             "production": {
